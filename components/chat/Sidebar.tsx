@@ -15,6 +15,7 @@ import {
     MoreHorizontal,
     Moon,
     Sun,
+    X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useChatContext } from "@/lib/chat/chat-context";
@@ -52,8 +53,7 @@ export function Sidebar({ isOpen, onClose, onNewChat }: SidebarProps) {
             {/* Backdrop for mobile */}
             {isOpen && (
                 <div
-                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden animate-fade-in-up"
-                    style={{ animationDuration: '150ms' }}
+                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
                     onClick={onClose}
                 />
             )}
@@ -61,14 +61,18 @@ export function Sidebar({ isOpen, onClose, onNewChat }: SidebarProps) {
             {/* Sidebar */}
             <aside
                 className={cn(
-                    "fixed lg:static inset-y-0 left-0 z-50 w-[280px] lg:w-[260px]",
-                    "bg-background border-r border-border",
-                    "flex flex-col transition-transform duration-200 ease-out",
+                    // Base styles
+                    "h-full bg-background border-r border-border flex flex-col",
+                    // Mobile: fixed, slide from left
+                    "fixed lg:relative inset-y-0 left-0 z-50 w-[280px] lg:w-full",
+                    "transition-transform duration-300 ease-out",
+                    // Mobile visibility
+                    "lg:translate-x-0",
                     isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
                 )}
             >
                 {/* Header */}
-                <div className="h-14 px-4 flex items-center justify-between border-b border-border">
+                <div className="h-14 px-4 flex items-center justify-between border-b border-border shrink-0">
                     <div
                         className="flex items-center gap-2.5 cursor-pointer"
                         onMouseEnter={() => setIsLogoHovered(true)}
@@ -107,19 +111,20 @@ export function Sidebar({ isOpen, onClose, onNewChat }: SidebarProps) {
                                 <Moon className="h-4 w-4" />
                             )}
                         </Button>
+                        {/* Close button for mobile */}
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={onClose}
                             className="h-8 w-8 lg:hidden"
                         >
-                            <ChevronLeft className="h-4 w-4" />
+                            <X className="h-4 w-4" />
                         </Button>
                     </div>
                 </div>
 
                 {/* New Chat Button */}
-                <div className="p-3">
+                <div className="p-3 shrink-0">
                     <Button
                         onClick={handleNewChat}
                         className="w-full gap-2 h-10 rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-transform"
@@ -130,7 +135,7 @@ export function Sidebar({ isOpen, onClose, onNewChat }: SidebarProps) {
                     </Button>
                 </div>
 
-                {/* Chat History Area */}
+                {/* Chat History Area - Scrollable */}
                 <ScrollArea className="flex-1 px-3">
                     {hasActiveChat ? (
                         <div className="space-y-1 animate-fade-in-up">
@@ -155,16 +160,16 @@ export function Sidebar({ isOpen, onClose, onNewChat }: SidebarProps) {
                     )}
                 </ScrollArea>
 
-                {/* Bottom Navigation */}
-                <div className="border-t border-border">
+                {/* Bottom Navigation - Fixed at bottom */}
+                <div className="border-t border-border shrink-0">
                     <div className="p-2 space-y-0.5">
-                        <Link href="/settings" className="block">
+                        <Link href="/settings" className="block" onClick={onClose}>
                             <Button variant="ghost" className="w-full justify-start gap-2.5 h-9 text-[13px] font-normal hover:translate-x-1 transition-transform">
                                 <Settings className="h-4 w-4" />
                                 Settings
                             </Button>
                         </Link>
-                        <Link href="/help" className="block">
+                        <Link href="/help" className="block" onClick={onClose}>
                             <Button variant="ghost" className="w-full justify-start gap-2.5 h-9 text-[13px] font-normal hover:translate-x-1 transition-transform">
                                 <HelpCircle className="h-4 w-4" />
                                 Help & Support

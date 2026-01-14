@@ -123,6 +123,13 @@
 
   body {
     @apply bg-background text-foreground;
+    height: 100%;
+    overflow: hidden;
+    /* Prevent body scroll, let app handle it */
+  }
+
+  html {
+    height: 100%;
   }
 }
 

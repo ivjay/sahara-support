@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+// import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatContext } from "@/lib/chat/chat-context";
 import { ChatMessage } from "./ChatMessage";
 import { TypingIndicator } from "./TypingIndicator";
@@ -78,7 +78,10 @@ export function ChatContainer({ onOptionSelect }: ChatContainerProps) {
     };
 
     return (
-        <ScrollArea className="flex-1 scrollbar-thin" ref={scrollRef}>
+        <div
+            className="flex-1 overflow-y-auto scrollbar-thin scroll-smooth min-h-0"
+            ref={scrollRef}
+        >
             <div className="max-w-3xl mx-auto px-4 py-8">
                 {/* Welcome state */}
                 {state.messages.length === 0 && (
@@ -133,6 +136,6 @@ export function ChatContainer({ onOptionSelect }: ChatContainerProps) {
                 {/* Typing Indicator */}
                 {state.isLoading && <TypingIndicator />}
             </div>
-        </ScrollArea>
+        </div>
     );
 }
