@@ -15,24 +15,17 @@ export default function ChatLayout({
 
     const handleNewChat = () => {
         setSidebarOpen(false);
-        window.dispatchEvent(new CustomEvent('sahara-new-chat'));
     };
 
     return (
         <ChatProvider>
-            <div className="h-dvh flex bg-background relative overflow-hidden">
-                {/* Background decorative elements */}
-                <div className="absolute inset-0 -z-10 pointer-events-none">
-                    <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl" />
-                    <div className="absolute bottom-0 left-1/3 w-[400px] h-[400px] bg-chart-2/5 rounded-full blur-3xl" />
-                </div>
-
+            <div className="h-dvh flex bg-background">
                 {/* Mobile menu button */}
                 <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => setSidebarOpen(true)}
-                    className="fixed top-2 left-2 h-10 w-10 z-50 lg:hidden bg-background/80 backdrop-blur-sm shadow-sm border border-border"
+                    className="fixed top-3 left-3 h-10 w-10 z-50 lg:hidden bg-background border border-border shadow-sm"
                 >
                     <Menu className="h-5 w-5" />
                     <span className="sr-only">Open menu</span>

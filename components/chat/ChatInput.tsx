@@ -18,13 +18,18 @@ export function ChatInput({
     placeholder = "Type your message...",
 }: ChatInputProps) {
     const [value, setValue] = useState("");
+    const [isSending, setIsSending] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const handleSend = () => {
         const trimmedValue = value.trim();
         if (trimmedValue && !disabled) {
+            setIsSending(true);
             onSend(trimmedValue);
             setValue("");
+
+            // Reset after brief animation
+            setTimeout(() => setIsSending(false), 150);
 
             // Reset textarea height
             if (textareaRef.current) {
@@ -34,7 +39,6 @@ export function ChatInput({
     };
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-        // Send on Enter (without Shift)
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             handleSend();
@@ -43,8 +47,6 @@ export function ChatInput({
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setValue(e.target.value);
-
-        // Auto-resize textarea
         const textarea = e.target;
         textarea.style.height = "auto";
         textarea.style.height = `${Math.min(textarea.scrollHeight, 150)}px`;
@@ -53,10 +55,14 @@ export function ChatInput({
     const canSend = value.trim().length > 0 && !disabled;
 
     return (
-        <div className="p-4 pt-2">
+        <div className="p-4 pt-2 border-t border-border bg-background/80 backdrop-blur-sm">
             <div className="max-w-3xl mx-auto">
                 {/* Input Container */}
-                <div className="relative flex items-end gap-2 bg-muted rounded-2xl border border-border shadow-sm p-3">
+                <div className={cn(
+                    "relative flex items-end gap-2 bg-muted rounded-2xl border border-border p-3 transition-all duration-200",
+                    canSend && "border-primary/30 shadow-sm",
+                    isSending && "scale-[0.99]"
+                )}>
                     {/* Input Field */}
                     <Textarea
                         ref={textareaRef}
@@ -80,23 +86,23 @@ export function ChatInput({
                         onClick={handleSend}
                         disabled={!canSend}
                         className={cn(
-                            "h-8 w-8 shrink-0 rounded-lg transition-all",
+                            "h-8 w-8 shrink-0 rounded-lg transition-all duration-200",
                             canSend
-                                ? "bg-primary hover:bg-primary/90"
+                                ? "bg-primary hover:bg-primary/90 hover:scale-105 active:scale-95"
                                 : "bg-muted-foreground/20 text-muted-foreground cursor-not-allowed"
                         )}
                     >
                         {disabled ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                            <ArrowUp className="h-4 w-4" />
+                            <ArrowUp className={cn("h-4 w-4 transition-transform", isSending && "-translate-y-1 opacity-0")} />
                         )}
                     </Button>
                 </div>
 
                 {/* Helper Text */}
                 <p className="text-[11px] text-muted-foreground/60 text-center mt-2">
-                    Sahara can make mistakes. Check important info.
+                    Press Enter to send • Shift+Enter for new line
                 </p>
             </div>
         </div>

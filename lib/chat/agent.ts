@@ -3,8 +3,6 @@ import {
     BookingState,
     BookingOption,
     Message,
-    INTENT_REQUIRED_FIELDS,
-    FIELD_QUESTIONS,
 } from "./types";
 import {
     INTENT_KEYWORDS,
@@ -12,7 +10,6 @@ import {
     MOCK_FLIGHT_OPTIONS,
     MOCK_APPOINTMENT_OPTIONS,
     MOCK_MOVIE_OPTIONS,
-    RESPONSE_TEMPLATES,
     WELCOME_MESSAGE,
 } from "./mock-data";
 import { delay, generateId } from "./utils";
@@ -35,33 +32,6 @@ export function detectIntent(message: string): Intent {
     return "UNKNOWN";
 }
 
-// Extract data from user message based on current booking context
-export function extractData(
-    message: string,
-    currentField: string
-): Record<string, string> {
-    // Simple extraction - in real app, this would use NLP
-    const extracted: Record<string, string> = {};
-
-    // Store the raw message as the field value for now
-    extracted[currentField] = message.trim();
-
-    return extracted;
-}
-
-// Get the next question to ask based on booking state
-export function getNextQuestion(bookingState: BookingState): string | null {
-    const { collectedData, requiredFields } = bookingState;
-
-    for (const field of requiredFields) {
-        if (!collectedData[field]) {
-            return FIELD_QUESTIONS[field] || `What is your ${field}?`;
-        }
-    }
-
-    return null; // All fields collected
-}
-
 // Get mock options based on intent
 function getMockOptions(intent: Intent): BookingOption[] {
     switch (intent) {
@@ -78,15 +48,20 @@ function getMockOptions(intent: Intent): BookingOption[] {
     }
 }
 
-// Create initial booking state for an intent
-export function createBookingState(intent: Intent): BookingState {
-    return {
-        intent,
-        step: 0,
-        collectedData: {},
-        requiredFields: INTENT_REQUIRED_FIELDS[intent] || [],
-        isComplete: false,
-    };
+// Get intent-specific intro message
+function getIntentIntro(intent: Intent): string {
+    switch (intent) {
+        case "BUS_BOOKING":
+            return "🚌 **Bus Booking**\n\nI found these available bus options for you. Here are the best routes with real-time availability:";
+        case "FLIGHT_BOOKING":
+            return "✈️ **Flight Search**\n\nHere are the available flights I found. All prices include taxes and fees:";
+        case "APPOINTMENT":
+            return "🏥 **Doctor Appointments**\n\nI found these doctors with available slots. All are highly rated professionals:";
+        case "MOVIE_BOOKING":
+            return "🎬 **Movie Tickets**\n\nHere's what's playing today! Select a show to book your seats:";
+        default:
+            return "Here are the available options:";
+    }
 }
 
 // Process user message and generate response
@@ -102,134 +77,86 @@ export async function processMessage(
     currentBooking: BookingState | null
 ): Promise<AgentResponse> {
     // Simulate API delay
-    await delay(1000 + Math.random() * 1000);
+    await delay(800 + Math.random() * 600);
 
-    // If we're in a booking flow
-    if (currentBooking && !currentBooking.isComplete) {
-        return handleBookingFlow(userMessage, currentBooking);
-    }
-
-    // Detect intent from new message
+    // Detect intent from message
     const intent = detectIntent(userMessage);
 
     switch (intent) {
         case "GREETING":
             return {
-                content: RESPONSE_TEMPLATES.GREETING,
-                quickReplies: ["Book a bus ticket", "Find flights", "Schedule appointment"],
+                content: "Hello! 👋 Welcome to Sahara. I'm here to help you with bookings and appointments.\n\nWhat would you like to do today?",
+                quickReplies: ["Book a bus ticket", "Find flights", "Doctor appointment", "Movie tickets"],
             };
 
         case "BUS_BOOKING":
-            const busBooking = createBookingState("BUS_BOOKING");
-            const busQuestion = getNextQuestion(busBooking);
+            const busOptions = getMockOptions("BUS_BOOKING");
             return {
-                content: `${RESPONSE_TEMPLATES.BUS_BOOKING_START}\n\n${busQuestion}`,
-                newBookingState: busBooking,
+                content: getIntentIntro("BUS_BOOKING"),
+                options: busOptions,
+                quickReplies: ["Show more options", "Different route", "Back to menu"],
             };
 
         case "FLIGHT_BOOKING":
-            const flightBooking = createBookingState("FLIGHT_BOOKING");
-            const flightQuestion = getNextQuestion(flightBooking);
+            const flightOptions = getMockOptions("FLIGHT_BOOKING");
             return {
-                content: `${RESPONSE_TEMPLATES.FLIGHT_BOOKING_START}\n\n${flightQuestion}`,
-                newBookingState: flightBooking,
+                content: getIntentIntro("FLIGHT_BOOKING"),
+                options: flightOptions,
+                quickReplies: ["Different dates", "More airlines", "Back to menu"],
             };
 
         case "APPOINTMENT":
-            const aptBooking = createBookingState("APPOINTMENT");
-            const aptQuestion = getNextQuestion(aptBooking);
+            const appointmentOptions = getMockOptions("APPOINTMENT");
             return {
-                content: `${RESPONSE_TEMPLATES.APPOINTMENT_START}\n\n${aptQuestion}`,
-                newBookingState: aptBooking,
+                content: getIntentIntro("APPOINTMENT"),
+                options: appointmentOptions,
+                quickReplies: ["Different specialty", "Different hospital", "Back to menu"],
             };
 
         case "MOVIE_BOOKING":
-            const movieBooking = createBookingState("MOVIE_BOOKING");
-            const movieQuestion = getNextQuestion(movieBooking);
+            const movieOptions = getMockOptions("MOVIE_BOOKING");
             return {
-                content: `${RESPONSE_TEMPLATES.MOVIE_BOOKING_START}\n\n${movieQuestion}`,
-                newBookingState: movieBooking,
+                content: getIntentIntro("MOVIE_BOOKING"),
+                options: movieOptions,
+                quickReplies: ["Different movie", "Different time", "Back to menu"],
             };
 
         case "GENERAL_QUERY":
             return {
-                content: WELCOME_MESSAGE,
-                quickReplies: ["Book a bus ticket", "Find flights", "Schedule appointment", "Book movie tickets"],
+                content: "I can help you with the following services:\n\n• 🚌 **Bus Tickets** - Book comfortable bus rides\n• ✈️ **Flights** - Find and book flights\n• 🏥 **Appointments** - Schedule doctor visits\n• 🎬 **Movies** - Book cinema tickets\n\nJust tell me what you need!",
+                quickReplies: ["Book a bus ticket", "Find flights", "Doctor appointment", "Movie tickets"],
             };
 
         default:
             return {
-                content: RESPONSE_TEMPLATES.UNKNOWN,
-                quickReplies: ["Book a bus ticket", "Find flights", "Help"],
+                content: "I'm not sure I understood that. Let me show you what I can help with:\n\n• **Bus Booking** - Say \"book a bus\"\n• **Flights** - Say \"find flights\"\n• **Appointments** - Say \"doctor appointment\"\n• **Movies** - Say \"movie tickets\"\n\nOr just tap one of the options below!",
+                quickReplies: ["Book a bus ticket", "Find flights", "Doctor appointment", "Movie tickets"],
             };
     }
-}
-
-// Handle ongoing booking flow
-function handleBookingFlow(
-    userMessage: string,
-    bookingState: BookingState
-): AgentResponse {
-    const { requiredFields, collectedData, intent } = bookingState;
-
-    // Find current field being collected
-    let currentField = "";
-    for (const field of requiredFields) {
-        if (!collectedData[field]) {
-            currentField = field;
-            break;
-        }
-    }
-
-    // Extract and store the data
-    const extracted = extractData(userMessage, currentField);
-    const updatedData = { ...collectedData, ...extracted };
-
-    // Create updated booking state
-    const updatedBooking: BookingState = {
-        ...bookingState,
-        step: bookingState.step + 1,
-        collectedData: updatedData,
-    };
-
-    // Check if all fields are collected
-    const allFieldsCollected = requiredFields.every((field) => updatedData[field]);
-
-    if (allFieldsCollected) {
-        // Show options
-        const options = getMockOptions(intent);
-        updatedBooking.isComplete = true;
-
-        // Build summary of collected data
-        const summary = Object.entries(updatedData)
-            .map(([key, value]) => `• ${key}: ${value}`)
-            .join("\n");
-
-        return {
-            content: `Great! Here's what I found based on your preferences:\n\n${summary}\n\n${RESPONSE_TEMPLATES.OPTIONS_FOUND}`,
-            options,
-            newBookingState: null, // Clear booking state after showing options
-        };
-    }
-
-    // Ask next question
-    const nextQuestion = getNextQuestion(updatedBooking);
-
-    return {
-        content: `Got it! ${nextQuestion}`,
-        newBookingState: updatedBooking,
-    };
 }
 
 // Handle option selection
 export async function handleOptionSelection(
     option: BookingOption
 ): Promise<AgentResponse> {
-    await delay(500);
+    await delay(600);
+
+    const confirmationMessages: Record<string, string> = {
+        bus: `🚌 **Booking Confirmed!**\n\nYou've selected **${option.title}**\n${option.subtitle}\n\n📍 Route: ${option.details.departure || ''} departure\n⏱️ Duration: ${option.details.duration || ''}\n💺 Type: ${option.details.busType || option.details.class || ''}\n\n💰 **Total: ${option.currency} ${option.price}**\n\n✅ Your booking reference: **SAH${Date.now().toString().slice(-6)}**\n\nYou'll receive a confirmation SMS shortly.`,
+
+        flight: `✈️ **Flight Booked!**\n\nYou've selected **${option.title}**\n${option.subtitle}\n\n🛫 Departure: ${option.details.departure || ''}\n✈️ Aircraft: ${option.details.aircraft || ''}\n💺 Class: ${option.details.class || ''}\n\n💰 **Total: ${option.currency} ${option.price}**\n\n✅ Booking reference: **SAH${Date.now().toString().slice(-6)}**\n\nE-ticket will be sent to your email.`,
+
+        appointment: `🏥 **Appointment Scheduled!**\n\nYou've booked with **${option.title}**\n${option.subtitle}\n\n🏥 ${option.details.hospital || ''}\n📅 ${option.details.nextSlot || ''}\n👨‍⚕️ Experience: ${option.details.experience || ''}\n\n💰 **Consultation Fee: ${option.currency} ${option.price}**\n\n✅ Appointment ID: **SAH${Date.now().toString().slice(-6)}**\n\nReminder will be sent before your appointment.`,
+
+        movie: `🎬 **Tickets Booked!**\n\nYou're watching **${option.title}**\n${option.subtitle}\n\n🕐 Showtime: ${option.details.showtime || ''}\n🎞️ Format: ${option.details.format || ''}\n🌐 Language: ${option.details.language || ''}\n\n💰 **Total: ${option.currency} ${option.price}**\n\n✅ Booking ID: **SAH${Date.now().toString().slice(-6)}**\n\nShow this at the counter to collect your tickets.`,
+    };
+
+    const message = confirmationMessages[option.type] ||
+        `✅ **Booking Confirmed!**\n\nYou've selected: ${option.title}\n\n💰 Total: ${option.currency} ${option.price}\n\nReference: SAH${Date.now().toString().slice(-6)}`;
 
     return {
-        content: `Excellent choice! You selected **${option.title}** - ${option.subtitle}.\n\n💰 Total: ${option.currency} ${option.price}\n\n${RESPONSE_TEMPLATES.BOOKING_COMPLETE}`,
-        quickReplies: ["Confirm booking", "Choose different option", "Cancel"],
+        content: message,
+        quickReplies: ["Book another", "View my bookings", "Rate this experience"],
     };
 }
 
@@ -240,6 +167,6 @@ export function getWelcomeMessage(): Message {
         role: "assistant",
         content: WELCOME_MESSAGE,
         timestamp: new Date(),
-        quickReplies: ["Book a bus ticket", "Find flights", "Schedule appointment", "Book movie tickets"],
+        quickReplies: ["Book a bus ticket", "Find flights", "Doctor appointment", "Movie tickets"],
     };
 }

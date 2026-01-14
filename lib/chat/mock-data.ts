@@ -1,32 +1,33 @@
 import { BookingOption, Intent } from "./types";
 
 // Welcome message
-export const WELCOME_MESSAGE = `Hi! 👋 I'm Sahara, your support assistant.
+export const WELCOME_MESSAGE = `Hello! 👋 I'm **Sahara**, your AI assistant.
 
 I can help you with:
-• 🚌 Bus ticket booking
-• ✈️ Flight reservations
-• 🏥 Doctor appointments
-• 🎬 Movie tickets
 
-How can I help you today?`;
+• 🚌 **Bus Tickets** - Find and book bus rides
+• ✈️ **Flights** - Search available flights
+• 🏥 **Appointments** - Schedule doctor visits
+• 🎬 **Movies** - Book cinema tickets
+
+What would you like to do today?`;
 
 // Quick action suggestions
 export const QUICK_ACTIONS = [
     "Book a bus ticket",
     "Find flights",
-    "Schedule an appointment",
-    "Book movie tickets",
+    "Doctor appointment",
+    "Movie tickets",
 ];
 
 // Intent detection keywords
 export const INTENT_KEYWORDS: Record<Intent, string[]> = {
-    GREETING: ["hi", "hello", "hey", "good morning", "good evening", "namaste"],
-    BUS_BOOKING: ["bus", "bus ticket", "travel by bus", "book bus"],
-    FLIGHT_BOOKING: ["flight", "fly", "airplane", "air ticket", "book flight"],
-    APPOINTMENT: ["appointment", "doctor", "hospital", "clinic", "checkup", "medical"],
-    MOVIE_BOOKING: ["movie", "cinema", "film", "theater", "show", "watch movie"],
-    GENERAL_QUERY: ["help", "what can you do", "services", "options"],
+    GREETING: ["hi", "hello", "hey", "good morning", "good evening", "namaste", "hola"],
+    BUS_BOOKING: ["bus", "bus ticket", "travel by bus", "book bus", "bus to", "bus ride"],
+    FLIGHT_BOOKING: ["flight", "fly", "airplane", "air ticket", "book flight", "flights to", "plane"],
+    APPOINTMENT: ["appointment", "doctor", "hospital", "clinic", "checkup", "medical", "schedule"],
+    MOVIE_BOOKING: ["movie", "cinema", "film", "theater", "show", "watch movie", "tickets"],
+    GENERAL_QUERY: ["help", "what can you do", "services", "options", "menu", "back to menu"],
     UNKNOWN: [],
 };
 
@@ -41,7 +42,6 @@ export const MOCK_BUS_OPTIONS: BookingOption[] = [
         currency: "NPR",
         details: {
             departure: "6:00 AM",
-            arrival: "1:00 PM",
             duration: "7 hours",
             busType: "AC Deluxe",
             seats: "12 available",
@@ -57,7 +57,6 @@ export const MOCK_BUS_OPTIONS: BookingOption[] = [
         currency: "NPR",
         details: {
             departure: "7:30 AM",
-            arrival: "2:00 PM",
             duration: "6.5 hours",
             busType: "Tourist Deluxe",
             seats: "8 available",
@@ -73,7 +72,6 @@ export const MOCK_BUS_OPTIONS: BookingOption[] = [
         currency: "NPR",
         details: {
             departure: "8:00 PM",
-            arrival: "4:00 AM",
             duration: "8 hours",
             busType: "Sleeper Bus",
             seats: "5 available",
@@ -93,7 +91,6 @@ export const MOCK_FLIGHT_OPTIONS: BookingOption[] = [
         currency: "NPR",
         details: {
             departure: "8:00 AM",
-            arrival: "8:25 AM",
             duration: "25 min",
             aircraft: "ATR 72-500",
             class: "Economy",
@@ -109,7 +106,6 @@ export const MOCK_FLIGHT_OPTIONS: BookingOption[] = [
         currency: "NPR",
         details: {
             departure: "10:30 AM",
-            arrival: "10:55 AM",
             duration: "25 min",
             aircraft: "Jetstream 41",
             class: "Economy",
@@ -130,8 +126,8 @@ export const MOCK_APPOINTMENT_OPTIONS: BookingOption[] = [
         details: {
             hospital: "City Hospital",
             experience: "15 years",
-            availability: "Mon-Fri",
             nextSlot: "Tomorrow 10:00 AM",
+            rating: "⭐ 4.8",
         },
         available: true,
     },
@@ -145,8 +141,8 @@ export const MOCK_APPOINTMENT_OPTIONS: BookingOption[] = [
         details: {
             hospital: "Heart Care Center",
             experience: "20 years",
-            availability: "Tue, Thu, Sat",
             nextSlot: "Thursday 2:00 PM",
+            rating: "⭐ 4.9",
         },
         available: true,
     },
@@ -165,7 +161,7 @@ export const MOCK_MOVIE_OPTIONS: BookingOption[] = [
             showtime: "4:30 PM",
             language: "Nepali",
             format: "2D",
-            rating: "⭐ 4.5/5",
+            rating: "⭐ 4.5",
         },
         available: true,
     },
@@ -180,21 +176,21 @@ export const MOCK_MOVIE_OPTIONS: BookingOption[] = [
             showtime: "7:00 PM",
             language: "English",
             format: "3D IMAX",
-            rating: "⭐ 4.8/5",
+            rating: "⭐ 4.8",
         },
         available: true,
     },
 ];
 
-// Response templates
+// Response templates (kept for reference but not heavily used now)
 export const RESPONSE_TEMPLATES = {
     GREETING: "Hello! How can I assist you today?",
-    BUS_BOOKING_START: "I'd be happy to help you book a bus ticket! Let me ask a few questions.",
-    FLIGHT_BOOKING_START: "Great! Let's find you the perfect flight. I'll need some details.",
-    APPOINTMENT_START: "I can help you schedule an appointment. Let me gather some information.",
-    MOVIE_BOOKING_START: "Let's get you some movie tickets! I just need a few details.",
-    OPTIONS_FOUND: "Here are the available options I found for you:",
-    NO_OPTIONS: "I couldn't find any options matching your criteria. Would you like to try different dates or preferences?",
-    BOOKING_COMPLETE: "Great choice! I've noted your selection. Would you like to proceed with the booking?",
-    UNKNOWN: "I'm not sure I understood that. Could you please rephrase or choose from the options I can help with?",
+    BUS_BOOKING_START: "I'd be happy to help you book a bus ticket!",
+    FLIGHT_BOOKING_START: "Great! Let's find you the perfect flight.",
+    APPOINTMENT_START: "I can help you schedule an appointment.",
+    MOVIE_BOOKING_START: "Let's get you some movie tickets!",
+    OPTIONS_FOUND: "Here are the available options:",
+    NO_OPTIONS: "I couldn't find any options matching your criteria.",
+    BOOKING_COMPLETE: "Your booking is confirmed!",
+    UNKNOWN: "I'm not sure I understood that. Could you please rephrase?",
 };
