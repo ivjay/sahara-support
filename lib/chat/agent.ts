@@ -43,10 +43,38 @@ export interface AgentResponse {
     newBookingState?: BookingState | null;
 }
 
+const QR_OPTION: BookingOption = {
+    id: "payment_qr",
+    type: "payment_qr",
+    title: "Scan to Pay",
+    subtitle: "E-Sewa / Khalti / ConnectIPS",
+    price: 0,
+    details: { qr: "true" },
+    available: true
+};
+
 export async function processMessage(
     userMessage: string,
     currentBooking: BookingState | null
 ): Promise<AgentResponse> {
+
+    // HARDCODED INTERCEPTION: Handle Payment Verification
+    // We check if there is ANY active booking intent and the user says "paid"
+    if (currentBooking && currentBooking.intent !== 'UNKNOWN') {
+        const msg = userMessage.toLowerCase();
+        // Check for common payment confirmation phrases
+        if (msg.includes("paid") || msg.includes("done") || msg.includes("complete") || msg.includes("ok")) {
+            return {
+                content: `✅ **Payment Verified!**\n\nThank you! Your booking has been confirmed. I've generated your receipt below.`,
+                quickReplies: ["Book another", "View my bookings"],
+                newBookingState: {
+                    ...currentBooking,
+                    step: 4,
+                    isComplete: true // Triggers the Receipt Modal
+                }
+            };
+        }
+    }
 
     // Call the server action
     // In a real app, we would pass the actual conversation history here
@@ -73,23 +101,45 @@ export async function handleOptionSelection(
 ): Promise<AgentResponse> {
     await delay(600);
 
-    // We can also move this to the AI later for more dynamic confirmations
-    const confirmationMessages: Record<string, string> = {
-        bus: `🚌 **Booking Confirmed!**\n\nYou've selected **${option.title}**\n${option.subtitle}\n\n📍 Route: ${option.details.departure || ''} departure\n⏱️ Duration: ${option.details.duration || ''}\n💺 Type: ${option.details.busType || option.details.class || ''}\n\n💰 **Total: ${option.currency} ${option.price}**\n\n✅ Your booking reference: **SAH${Date.now().toString().slice(-6)}**\n\nYou'll receive a confirmation SMS shortly.`,
-
-        flight: `✈️ **Flight Booked!**\n\nYou've selected **${option.title}**\n${option.subtitle}\n\n🛫 Departure: ${option.details.departure || ''}\n✈️ Aircraft: ${option.details.aircraft || ''}\n💺 Class: ${option.details.class || ''}\n\n💰 **Total: ${option.currency} ${option.price}**\n\n✅ Booking reference: **SAH${Date.now().toString().slice(-6)}**\n\nE-ticket will be sent to your email.`,
-
-        appointment: `🏥 **Appointment Scheduled!**\n\nYou've booked with **${option.title}**\n${option.subtitle}\n\n🏥 ${option.details.hospital || ''}\n📅 ${option.details.nextSlot || ''}\n👨‍⚕️ Experience: ${option.details.experience || ''}\n\n💰 **Consultation Fee: ${option.currency} ${option.price}**\n\n✅ Appointment ID: **SAH${Date.now().toString().slice(-6)}**\n\nReminder will be sent before your appointment.`,
-
-        movie: `🎬 **Tickets Booked!**\n\nYou're watching **${option.title}**\n${option.subtitle}\n\n🕐 Showtime: ${option.details.showtime || ''}\n🎞️ Format: ${option.details.format || ''}\n🌐 Language: ${option.details.language || ''}\n\n💰 **Total: ${option.currency} ${option.price}**\n\n✅ Booking ID: **SAH${Date.now().toString().slice(-6)}**\n\nShow this at the counter to collect your tickets.`,
+    const paymentRequestMessages: Record<string, string> = {
+        bus: `🚌 **Confirm Selection: ${option.title}**\n\n📍 Route: ${option.details.departure || 'Kathmandu'} departure\n💰 **Amount Due: ${option.currency} ${option.price}**\n\nPlease scan the QR code to complete your payment.`,
+        flight: `✈️ **Confirm Selection: ${option.title}**\n\n🛫 Flight to: ${option.details.departure || 'Destination'}\n💰 **Amount Due: ${option.currency} ${option.price}**\n\nPlease scan the QR code to issue your e-ticket.`,
+        appointment: `🏥 **Confirm Appointment: ${option.title}**\n\n📅 Date: ${option.details.nextSlot || 'Upcoming'}\n💰 **Consultation Fee: ${option.currency} ${option.price}**\n\nPlease pay the booking fee to confirm.`,
+        movie: `🎬 **Confirm Tickets: ${option.title}**\n\n🕐 Showtime: ${option.details.showtime || 'Soon'}\n💰 **Total: ${option.currency} ${option.price}**\n\nScan to pay and grab your seats!`,
     };
 
-    const message = confirmationMessages[option.type] ||
-        `✅ **Booking Confirmed!**\n\nYou've selected: ${option.title}\n\n💰 Total: ${option.currency} ${option.price}\n\nReference: SAH${Date.now().toString().slice(-6)}`;
+    const message = paymentRequestMessages[option.type] ||
+        `**Confirm Selection: ${option.title}**\n\n💰 Total: ${option.currency} ${option.price}\n\nPlease scan to pay.`;
+
+    // Map option type to Intent
+    const intentMap: Record<string, Intent> = {
+        bus: "BUS_BOOKING",
+        flight: "FLIGHT_BOOKING",
+        appointment: "APPOINTMENT",
+        movie: "MOVIE_BOOKING"
+    };
+
+    // Prepare metadata for the receipt later
+    const collectedData = {
+        from: option.details.route || option.title,
+        to: option.subtitle,
+        date: option.details.date || new Date().toLocaleDateString(),
+        specialist: option.title,
+        time: option.details.time || option.details.showtime || option.details.departure,
+        price: `${option.currency} ${option.price}`
+    };
 
     return {
         content: message,
-        quickReplies: ["Book another", "View my bookings", "Rate this experience"],
+        options: [QR_OPTION], // Send QR Option
+        quickReplies: ["Paid", "I have paid", "Cancel"],
+        newBookingState: {
+            intent: intentMap[option.type] || "UNKNOWN",
+            step: 3, // Payment Step
+            collectedData: collectedData,
+            requiredFields: [],
+            isComplete: false // Do NOT trigger modal yet
+        }
     };
 }
 

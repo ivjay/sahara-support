@@ -62,20 +62,6 @@ export default function SettingsPage() {
                             </div>
                             <Switch checked={darkMode} onCheckedChange={toggleDarkMode} />
                         </div>
-                        <div className="flex items-center justify-between p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                                    <Palette className="h-5 w-5 text-primary" />
-                                </div>
-                                <div>
-                                    <Label className="text-[15px] font-medium">Theme Color</Label>
-                                    <p className="text-[13px] text-muted-foreground">Choose accent color</p>
-                                </div>
-                            </div>
-                            <Button variant="ghost" size="icon" className="h-9 w-9">
-                                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                            </Button>
-                        </div>
                     </Card>
                 </section>
 

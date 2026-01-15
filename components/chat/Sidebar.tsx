@@ -33,12 +33,28 @@ export function Sidebar({ isOpen, onClose, onNewChat }: SidebarProps) {
     const [isLogoHovered, setIsLogoHovered] = useState(false);
 
     useEffect(() => {
-        setIsDark(document.documentElement.classList.contains("dark"));
+        // Load theme preference
+        const savedTheme = localStorage.getItem("sahara_theme");
+        if (savedTheme === "dark") {
+            document.documentElement.classList.add("dark");
+            setIsDark(true);
+        } else if (savedTheme === "light") {
+            document.documentElement.classList.remove("dark");
+            setIsDark(false);
+        } else {
+            // Default to system or light
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                // Optional: Auto-detect
+                // document.documentElement.classList.add("dark");
+                // setIsDark(true);
+            }
+        }
     }, []);
 
     const toggleDarkMode = () => {
-        document.documentElement.classList.toggle("dark");
-        setIsDark(!isDark);
+        const isNowDark = document.documentElement.classList.toggle("dark");
+        setIsDark(isNowDark);
+        localStorage.setItem("sahara_theme", isNowDark ? "dark" : "light");
     };
 
     const handleNewChat = () => {
@@ -145,7 +161,7 @@ export function Sidebar({ isOpen, onClose, onNewChat }: SidebarProps) {
                             <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border border-primary/20 hover-lift cursor-pointer">
                                 <MessageSquare className="h-4 w-4 shrink-0" />
                                 <span className="text-[13px] truncate flex-1 font-medium">
-                                    {state.currentBooking ? "Booking in progress" : "New conversation"}
+                                    {state.currentBooking ? "Booking in progress" : "Current Session"}
                                 </span>
                             </div>
                         </div>

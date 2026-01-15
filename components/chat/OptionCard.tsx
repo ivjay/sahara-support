@@ -54,19 +54,7 @@ export function OptionCard({ option, onSelect }: OptionCardProps) {
                 )}
             </div>
 
-            {/* Details with subtle animation */}
-            <div className="grid grid-cols-2 gap-2 mb-4 text-[12px] p-3 rounded-lg bg-muted/50">
-                {Object.entries(option.details).map(([key, value], index) => (
-                    <div
-                        key={key}
-                        className="animate-fade-in-up"
-                        style={{ animationDelay: `${index * 30}ms` }}
-                    >
-                        <span className="text-muted-foreground capitalize">{key}: </span>
-                        <span className="font-medium">{value}</span>
-                    </div>
-                ))}
-            </div>
+
 
             {/* Action Button */}
             <Button

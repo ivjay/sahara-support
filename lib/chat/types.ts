@@ -25,7 +25,7 @@ export interface Message {
 // Booking option card displayed to user
 export interface BookingOption {
     id: string;
-    type: "bus" | "flight" | "appointment" | "movie";
+    type: "bus" | "flight" | "appointment" | "movie" | "payment_qr";
     category?: string;
     title: string;
     subtitle: string;
@@ -58,7 +58,8 @@ export type ChatAction =
     | { type: "SET_LOADING"; payload: boolean }
     | { type: "SET_BOOKING"; payload: BookingState | null }
     | { type: "CLEAR_CHAT" }
-    | { type: "UPDATE_BOOKING_DATA"; payload: Record<string, string> };
+    | { type: "UPDATE_BOOKING_DATA"; payload: Record<string, string> }
+    | { type: "REHYDRATE"; payload: ChatState };
 
 // Required fields per intent
 export const INTENT_REQUIRED_FIELDS: Record<Intent, string[]> = {

@@ -9,8 +9,9 @@ import { processMessage, handleOptionSelection } from "@/lib/chat/agent";
 import { BookingOption } from "@/lib/chat/types";
 import { Button } from "@/components/ui/button";
 import { Menu, HeartHandshake } from "lucide-react";
-
 import Link from "next/link";
+import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
+import { BookingSuccessModal } from "@/components/booking/BookingSuccessModal";
 
 export default function ChatPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -55,14 +56,20 @@ export default function ChatPage() {
         try {
             const response = await handleOptionSelection(option);
             addMessage(response.content, "assistant", {
+                options: response.options,
                 quickReplies: response.quickReplies,
             });
+
+            // Check if there's a new booking state (e.g. completion)
+            if (response.newBookingState) {
+                setBooking(response.newBookingState);
+            }
         } catch (error) {
             addMessage("Sorry, couldn't process your selection.", "assistant");
         } finally {
             setLoading(false);
         }
-    }, [addMessage, setLoading]);
+    }, [addMessage, setLoading, setBooking]);
 
     const handleNewChat = () => {
         setSidebarOpen(false);
@@ -132,6 +139,17 @@ export default function ChatPage() {
                     }
                 />
             </div>
+
+            {/* Onboarding Modal - Shows for first-time users */}
+            <OnboardingModal />
+
+            {/* Booking Success Modal - Shows when booking is complete */}
+            {state.currentBooking?.isComplete && (
+                <BookingSuccessModal
+                    booking={state.currentBooking}
+                    onClose={() => setBooking(null)}
+                />
+            )}
         </div>
     );
 }

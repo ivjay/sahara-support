@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
     ArrowLeft,
     CheckCircle2,
@@ -15,43 +17,89 @@ import {
     Briefcase,
     Home,
     AlertCircle,
-    Edit3
+    Edit3,
+    Save,
+    X as XIcon
 } from "lucide-react";
 import Link from "next/link";
 import { CURRENT_USER } from "@/lib/user-context";
 
 // Use centralized user context
-const USER_PROFILE = CURRENT_USER;
+const DEFAULT_PROFILE = CURRENT_USER;
 
 export default function ProfilePage() {
+    const [isEditing, setIsEditing] = useState(false);
+    const [profile, setProfile] = useState(DEFAULT_PROFILE);
+
+    // Load from localStorage on mount
+    useEffect(() => {
+        const saved = localStorage.getItem("sahara_user_profile");
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                setProfile({ ...DEFAULT_PROFILE, ...parsed });
+            } catch (e) {
+                console.error("Failed to load profile", e);
+            }
+        }
+    }, []);
+
+    const handleSave = () => {
+        setIsEditing(false);
+        localStorage.setItem("sahara_user_profile", JSON.stringify(profile));
+    };
+
+    const handleCancel = () => {
+        setIsEditing(false);
+        // Reload to reset changes
+        const saved = localStorage.getItem("sahara_user_profile");
+        if (saved) {
+            setProfile({ ...DEFAULT_PROFILE, ...JSON.parse(saved) });
+        } else {
+            setProfile(DEFAULT_PROFILE);
+        }
+    };
+
+    const updateField = (key: string, value: string) => {
+        setProfile(prev => ({ ...prev, [key]: value }));
+    };
+
     return (
         <main className="h-dvh overflow-y-auto flex flex-col bg-background relative">
-            {/* Background Effects - Enhanced for light mode */}
-            <div className="fixed inset-0 -z-10 overflow-hidden">
-                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/15 dark:bg-primary/10 rounded-full blur-[120px]" />
-                <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-chart-2/15 dark:bg-blue-500/10 rounded-full blur-[120px]" />
-                {/* Subtle grid for light mode */}
-                <div
-                    className="absolute inset-0 opacity-[0.03] dark:opacity-[0.02]"
-                    style={{
-                        backgroundImage: `linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)`,
-                        backgroundSize: '40px 40px',
-                    }}
-                />
+            {/* Background Effects */}
+            <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px]" />
+                <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-chart-2/10 rounded-full blur-[120px]" />
             </div>
 
             {/* Header */}
             <header className="p-4 sticky top-0 z-10 backdrop-blur-md bg-background/80 border-b border-border/50">
                 <div className="flex items-center justify-between max-w-2xl mx-auto">
-                    <Link href="/chat">
-                        <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted">
-                            <ArrowLeft className="h-5 w-5" />
-                        </Button>
-                    </Link>
-                    <h1 className="font-semibold">My Profile</h1>
-                    <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted">
-                        <Edit3 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-4">
+                        <Link href="/chat">
+                            <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted">
+                                <ArrowLeft className="h-5 w-5" />
+                            </Button>
+                        </Link>
+                        <h1 className="font-semibold">My Profile</h1>
+                    </div>
+                    <div>
+                        {isEditing ? (
+                            <div className="flex gap-2">
+                                <Button variant="ghost" size="icon" onClick={handleCancel} className="rounded-full">
+                                    <XIcon className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" onClick={handleSave} className="rounded-full gap-2">
+                                    <Save className="h-4 w-4" />
+                                    Save
+                                </Button>
+                            </div>
+                        ) : (
+                            <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)} className="rounded-full hover:bg-muted">
+                                <Edit3 className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
                 </div>
             </header>
 
@@ -63,7 +111,7 @@ export default function ProfilePage() {
                         {/* Avatar */}
                         <div className="relative shrink-0">
                             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-chart-2 flex items-center justify-center shadow-lg shadow-primary/20 text-2xl font-bold text-primary-foreground">
-                                {USER_PROFILE.avatarInitials}
+                                {profile.avatarInitials}
                             </div>
                             <div className="absolute -bottom-1 -right-1 bg-background p-1 rounded-full shadow-sm border border-border">
                                 <div className="bg-green-500 rounded-full p-0.5">
@@ -73,15 +121,23 @@ export default function ProfilePage() {
                         </div>
 
                         <div className="flex-1 min-w-0">
-                            <h1 className="text-xl font-bold tracking-tight truncate">{USER_PROFILE.name}</h1>
-                            <p className="text-sm text-muted-foreground truncate">{USER_PROFILE.email}</p>
+                            {isEditing ? (
+                                <Input
+                                    value={profile.name}
+                                    onChange={(e) => updateField("name", e.target.value)}
+                                    className="font-bold text-lg h-9"
+                                />
+                            ) : (
+                                <h1 className="text-xl font-bold tracking-tight truncate">{profile.name}</h1>
+                            )}
+                            <p className="text-sm text-muted-foreground truncate">{profile.email}</p>
                             <div className="flex items-center gap-2 mt-2">
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-500/10 text-green-600 dark:text-green-400 text-xs font-medium rounded-full">
                                     <ShieldCheck className="w-3 h-3" />
                                     KYC Verified
                                 </span>
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary text-xs font-medium rounded-full">
-                                    {USER_PROFILE.accountType}
+                                    {profile.accountType}
                                 </span>
                             </div>
                         </div>
@@ -91,39 +147,109 @@ export default function ProfilePage() {
                 {/* Personal Information */}
                 <SectionCard title="Personal Information" icon={User}>
                     <div className="grid gap-4 sm:grid-cols-2">
-                        <InfoField label="Full Name" value={USER_PROFILE.name} />
-                        <InfoField label="Date of Birth" value={formatDate(USER_PROFILE.dateOfBirth)} />
-                        <InfoField label="Gender" value={USER_PROFILE.gender} />
-                        <InfoField label="Nationality" value={USER_PROFILE.nationality} />
+                        <InfoField
+                            label="Full Name"
+                            value={profile.name}
+                            isEditing={isEditing}
+                            onChange={(val) => updateField("name", val)}
+                        />
+                        <InfoField
+                            label="Date of Birth"
+                            value={profile.dateOfBirth}
+                            isEditing={isEditing}
+                            onChange={(val) => updateField("dateOfBirth", val)}
+                        />
+                        <InfoField
+                            label="Gender"
+                            value={profile.gender}
+                            isEditing={isEditing}
+                            onChange={(val) => updateField("gender", val)}
+                        />
+                        <InfoField
+                            label="Nationality"
+                            value={profile.nationality}
+                            isEditing={isEditing}
+                            onChange={(val) => updateField("nationality", val)}
+                        />
                     </div>
                 </SectionCard>
 
                 {/* Contact Details */}
                 <SectionCard title="Contact Details" icon={Phone}>
                     <div className="grid gap-4 sm:grid-cols-2">
-                        <InfoField label="Email Address" value={USER_PROFILE.email} icon={Mail} />
-                        <InfoField label="Primary Phone" value={USER_PROFILE.phone} icon={Phone} />
-                        <InfoField label="Alternate Phone" value={USER_PROFILE.alternatePhone} icon={Phone} />
-                        <InfoField label="Sahara ID" value={USER_PROFILE.idNumber} icon={CreditCard} />
+                        <InfoField label="Email Address" value={profile.email} icon={Mail} />
+                        <InfoField
+                            label="Primary Phone"
+                            value={profile.phone}
+                            icon={Phone}
+                            isEditing={isEditing}
+                            onChange={(val) => updateField("phone", val)}
+                        />
+                        <InfoField
+                            label="Alternate Phone"
+                            value={profile.alternatePhone}
+                            icon={Phone}
+                            isEditing={isEditing}
+                            onChange={(val) => updateField("alternatePhone", val)}
+                        />
+                        <InfoField label="Sahara ID" value={profile.idNumber} icon={CreditCard} />
                     </div>
                 </SectionCard>
 
                 {/* Address Information */}
                 <SectionCard title="Address" icon={Home}>
                     <div className="grid gap-4 sm:grid-cols-2">
-                        <InfoField label="Current Address" value={USER_PROFILE.currentAddress} fullWidth />
-                        <InfoField label="Permanent Address" value={USER_PROFILE.permanentAddress} fullWidth />
-                        <InfoField label="City" value={USER_PROFILE.city} />
-                        <InfoField label="Postal Code" value={USER_PROFILE.postalCode} />
+                        <InfoField
+                            label="Current Address"
+                            value={profile.currentAddress}
+                            fullWidth
+                            isEditing={isEditing}
+                            onChange={(val) => updateField("currentAddress", val)}
+                        />
+                        <InfoField
+                            label="Permanent Address"
+                            value={profile.permanentAddress}
+                            fullWidth
+                            isEditing={isEditing}
+                            onChange={(val) => updateField("permanentAddress", val)}
+                        />
+                        <InfoField
+                            label="City"
+                            value={profile.city}
+                            isEditing={isEditing}
+                            onChange={(val) => updateField("city", val)}
+                        />
+                        <InfoField
+                            label="Postal Code"
+                            value={profile.postalCode}
+                            isEditing={isEditing}
+                            onChange={(val) => updateField("postalCode", val)}
+                        />
                     </div>
                 </SectionCard>
 
                 {/* Emergency Contact */}
                 <SectionCard title="Emergency Contact" icon={AlertCircle}>
                     <div className="grid gap-4 sm:grid-cols-2">
-                        <InfoField label="Contact Name" value={USER_PROFILE.emergencyName} />
-                        <InfoField label="Relationship" value={USER_PROFILE.emergencyRelation} />
-                        <InfoField label="Phone Number" value={USER_PROFILE.emergencyPhone} fullWidth />
+                        <InfoField
+                            label="Contact Name"
+                            value={profile.emergencyName}
+                            isEditing={isEditing}
+                            onChange={(val) => updateField("emergencyName", val)}
+                        />
+                        <InfoField
+                            label="Relationship"
+                            value={profile.emergencyRelation}
+                            isEditing={isEditing}
+                            onChange={(val) => updateField("emergencyRelation", val)}
+                        />
+                        <InfoField
+                            label="Phone Number"
+                            value={profile.emergencyPhone}
+                            fullWidth
+                            isEditing={isEditing}
+                            onChange={(val) => updateField("emergencyPhone", val)}
+                        />
                     </div>
                 </SectionCard>
 
@@ -143,7 +269,7 @@ export default function ProfilePage() {
 
                 {/* Account Info Footer */}
                 <div className="text-center text-xs text-muted-foreground pt-2 pb-6">
-                    <p>Member since {USER_PROFILE.memberSince}</p>
+                    <p>Member since {profile.memberSince}</p>
                     <p className="mt-1">Sahara v1.0.0</p>
                 </div>
 
@@ -168,20 +294,36 @@ function SectionCard({ title, icon: Icon, children }: { title: string, icon: any
 }
 
 // Info Field Component
-function InfoField({ label, value, icon: Icon, fullWidth }: { label: string, value: string, icon?: any, fullWidth?: boolean }) {
+function InfoField({
+    label,
+    value,
+    icon: Icon,
+    fullWidth,
+    isEditing,
+    onChange
+}: {
+    label: string,
+    value: string,
+    icon?: any,
+    fullWidth?: boolean,
+    isEditing?: boolean,
+    onChange?: (val: string) => void
+}) {
     return (
         <div className={`space-y-1 ${fullWidth ? 'sm:col-span-2' : ''}`}>
             <p className="text-xs text-muted-foreground">{label}</p>
             <div className="flex items-center gap-2">
-                {Icon && <Icon className="w-4 h-4 text-muted-foreground/50" />}
-                <p className="text-sm font-medium">{value}</p>
+                {Icon && <Icon className="w-4 h-4 text-muted-foreground/50 shrink-0" />}
+                {isEditing && onChange ? (
+                    <Input
+                        value={value}
+                        onChange={(e) => onChange(e.target.value)}
+                        className="h-8 text-sm"
+                    />
+                ) : (
+                    <p className="text-sm font-medium min-h-[20px]">{value}</p>
+                )}
             </div>
         </div>
     );
-}
-
-// Helper to format date
-function formatDate(dateStr: string): string {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }

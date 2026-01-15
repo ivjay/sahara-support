@@ -9,6 +9,7 @@ import { OptionCard } from "./OptionCard";
 import { BookingOption } from "@/lib/chat/types";
 import { Bus, Plane, Calendar, Ticket } from "lucide-react";
 import { CURRENT_USER } from "@/lib/user-context";
+import { QRCodeCard } from "./QRCodeCard";
 
 interface ChatContainerProps {
     onOptionSelect?: (option: BookingOption) => void;
@@ -136,16 +137,26 @@ export function ChatContainer({ onOptionSelect }: ChatContainerProps) {
                     <div key={message.id}>
                         <ChatMessage message={message} />
 
-                        {/* Show options if present */}
+
+
+                        {/* Show options if present - Grid Layout */}
                         {message.options && message.options.length > 0 && (
-                            <div className="ml-12 mb-6 space-y-3 max-w-lg">
-                                {message.options.map((option) => (
-                                    <OptionCard
-                                        key={option.id}
-                                        option={option}
-                                        onSelect={onOptionSelect || (() => { })}
-                                    />
-                                ))}
+                            <div className="ml-12 mb-6 max-w-2xl">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {message.options.map((option) => (
+                                        option.type === 'payment_qr' ? (
+                                            <div className="col-span-1 sm:col-span-2" key={option.id}>
+                                                <QRCodeCard option={option} />
+                                            </div>
+                                        ) : (
+                                            <OptionCard
+                                                key={option.id}
+                                                option={option}
+                                                onSelect={onOptionSelect || (() => { })}
+                                            />
+                                        )
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>

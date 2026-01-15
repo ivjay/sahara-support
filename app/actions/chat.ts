@@ -3,6 +3,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { withRetry, formatApiError } from "@/lib/chat/chat-service";
 import { getUserContextForAI, CURRENT_USER } from "@/lib/user-context";
+import { generateContentWithGitHub } from "@/lib/chat/github-service";
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
@@ -83,6 +84,34 @@ export async function getAgentResponse(
     message: string,
     history: { role: "user" | "model"; parts: string }[] = []
 ): Promise<AgentResponseAPIType> {
+    // 1. Try GitHub Models (Primary)
+    if (process.env.GITHUB_TOKEN) {
+        try {
+            // Convert history format for GitHub/OpenAI
+            const ghMessages = history.map(h => ({
+                role: h.role === "model" ? "assistant" : "user",
+                content: h.parts
+            }));
+            // Add current message
+            ghMessages.push({ role: "user", content: message });
+
+            const response = await withRetry(async () => {
+                return await generateContentWithGitHub(SYSTEM_PROMPT, ghMessages);
+            });
+
+            try {
+                return JSON.parse(response);
+            } catch (parseError) {
+                console.error("GitHub JSON Parse Error:", parseError);
+                // Continue to Gemini fallback
+            }
+        } catch (error: any) {
+            console.warn("GitHub Models Error (Primary):", error.message);
+            console.log("⚠️ Switching to Gemini Fallback...");
+        }
+    }
+
+    // 2. Gemini Fallback (or Primary if no GitHub token)
     try {
         const response = await withRetry(async () => {
             const model = genAI.getGenerativeModel({
@@ -112,20 +141,14 @@ export async function getAgentResponse(
         });
 
         try {
-            const parsed = JSON.parse(response);
-            return parsed;
+            return JSON.parse(response);
         } catch (parseError) {
-            console.error("JSON Parse Error:", parseError);
-            return {
-                content: "I'm having trouble processing that. Could you rephrase?",
-                showOptions: null,
-                filterCategory: null,
-                quickReplies: ["Try again", "Start over"]
-            };
+            console.error("Gemini JSON Parse Error:", parseError);
+            throw parseError;
         }
 
     } catch (error) {
-        console.error("Gemini API Error:", error);
+        console.error("All AI Services Failed:", error);
         return {
             content: formatApiError(error),
             showOptions: null,

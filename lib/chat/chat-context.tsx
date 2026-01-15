@@ -6,6 +6,7 @@ import {
     useReducer,
     ReactNode,
     useCallback,
+    useEffect,
 } from "react";
 import {
     ChatState,
@@ -24,9 +25,14 @@ const initialState: ChatState = {
     userId: "demo-user",
 };
 
+const STORAGE_KEY = "sahara_chat_history_v1";
+
 // Reducer function
-function chatReducer(state: ChatState, action: ChatAction): ChatState {
+function chatReducer(state: ChatState, action: ChatAction | { type: "REHYDRATE", payload: ChatState }): ChatState {
     switch (action.type) {
+        case "REHYDRATE":
+            return action.payload;
+
         case "ADD_MESSAGE":
             return {
                 ...state,
@@ -90,6 +96,35 @@ interface ChatProviderProps {
 export function ChatProvider({ children }: ChatProviderProps) {
     const [state, dispatch] = useReducer(chatReducer, initialState);
 
+    // Load from localStorage on mount
+    useEffect(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                // Restore Dates (JSON converts them to strings)
+                parsed.messages = parsed.messages.map((m: any) => ({
+                    ...m,
+                    timestamp: new Date(m.timestamp)
+                }));
+
+                dispatch({ type: "REHYDRATE", payload: parsed });
+            } catch (e) {
+                console.error("Failed to load chat history", e);
+            }
+        }
+    }, []);
+
+    // Save to localStorage on change
+    useEffect(() => {
+        if (state.messages.length > 0) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } else if (state !== initialState) {
+            // If reset to initial state, clear storage too (except maybe userId)
+            localStorage.removeItem(STORAGE_KEY);
+        }
+    }, [state]);
+
     // Add a new message
     const addMessage = useCallback(
         (content: string, role: MessageRole, extras?: Partial<Message>): Message => {
@@ -124,6 +159,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
     // Clear all messages
     const clearChat = useCallback(() => {
         dispatch({ type: "CLEAR_CHAT" });
+        localStorage.removeItem(STORAGE_KEY);
     }, []);
 
     const value: ChatContextType = {
