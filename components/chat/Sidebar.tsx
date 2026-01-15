@@ -179,18 +179,20 @@ export function Sidebar({ isOpen, onClose, onNewChat }: SidebarProps) {
 
                     {/* User Profile */}
                     <div className="p-3 pt-0">
-                        <div className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/50 hover:bg-muted transition-all hover-lift cursor-pointer">
-                            <Avatar className="h-9 w-9 bg-primary flex items-center justify-center">
-                                <User className="h-4 w-4 text-primary-foreground" />
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-[13px] font-medium truncate">Demo User</p>
-                                <p className="text-[10px] text-muted-foreground">Free Plan</p>
+                        <Link href="/profile" className="block" onClick={onClose}>
+                            <div className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/50 hover:bg-muted transition-all hover-lift cursor-pointer group">
+                                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-xs font-bold text-primary-foreground shadow-sm group-hover:scale-105 transition-transform">
+                                    BA
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[13px] font-medium truncate">Bijay Acharya</p>
+                                    <p className="text-[10px] text-muted-foreground">Premium • Verified ✓</p>
+                                </div>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 hover:rotate-90 transition-transform">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
                             </div>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 hover:rotate-90 transition-transform">
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </div>
+                        </Link>
                     </div>
                 </div>
             </aside>

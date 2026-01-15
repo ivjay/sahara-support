@@ -55,14 +55,20 @@ export function ChatInput({
     const canSend = value.trim().length > 0 && !disabled;
 
     return (
-        <div className="p-4 pt-2 border-t border-border bg-background/80 backdrop-blur-sm">
+        <div className="p-4 pt-2 border-t border-border/50 bg-background/80 backdrop-blur-md">
             <div className="max-w-3xl mx-auto">
-                {/* Input Container */}
+                {/* Input Container - Enhanced */}
                 <div className={cn(
-                    "relative flex items-end gap-2 bg-muted rounded-2xl border border-border p-3 transition-all duration-200",
-                    canSend && "border-primary/30 shadow-sm",
+                    "relative flex items-end gap-2 bg-muted/50 rounded-2xl border p-3 transition-all duration-300",
+                    canSend
+                        ? "border-primary/40 shadow-lg shadow-primary/10 bg-muted/70"
+                        : "border-border/50",
                     isSending && "scale-[0.99]"
                 )}>
+                    {/* Gradient glow effect when active */}
+                    {canSend && (
+                        <div className="absolute -inset-[1px] bg-gradient-to-r from-primary/20 via-chart-2/20 to-primary/20 rounded-2xl -z-10 blur-sm" />
+                    )}
                     {/* Input Field */}
                     <Textarea
                         ref={textareaRef}

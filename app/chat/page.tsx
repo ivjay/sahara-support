@@ -10,6 +10,8 @@ import { BookingOption } from "@/lib/chat/types";
 import { Button } from "@/components/ui/button";
 import { Menu, HeartHandshake } from "lucide-react";
 
+import Link from "next/link";
+
 export default function ChatPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const {
@@ -103,6 +105,14 @@ export default function ChatPage() {
                             <HeartHandshake className="w-4 h-4 text-primary-foreground" strokeWidth={1.5} />
                         </div>
                         <span className="font-semibold text-sm">Sahara</span>
+                    </div>
+                    {/* Mobile Profile Link */}
+                    <div className="ml-auto">
+                        <Link href="/profile">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-xs font-bold text-primary-foreground shadow-sm">
+                                BA
+                            </div>
+                        </Link>
                     </div>
                 </header>
 

@@ -41,6 +41,14 @@ export default function HomePage() {
                 </div>
 
                 {/* Logo */}
+                <div className="absolute top-0 right-0 p-4">
+                    <Link href="/profile">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:scale-105 transition-transform cursor-pointer">
+                            BA
+                        </div>
+                    </Link>
+                </div>
+
                 <div
                     className={`mb-10 transition-all duration-500 delay-75 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
                 >

@@ -31,7 +31,7 @@ export default function SettingsPage() {
     };
 
     return (
-        <div className="min-h-dvh bg-gradient-to-b from-muted/30 to-background">
+        <div className="h-dvh overflow-y-auto bg-gradient-to-b from-muted/30 to-background">
             {/* Header */}
             <header className="h-14 border-b border-border bg-background/95 backdrop-blur sticky top-0 z-40">
                 <div className="flex items-center gap-4 px-4 h-full max-w-2xl mx-auto">

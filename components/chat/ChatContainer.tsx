@@ -79,34 +79,51 @@ export function ChatContainer({ onOptionSelect }: ChatContainerProps) {
 
     return (
         <div
-            className="flex-1 overflow-y-auto scrollbar-thin scroll-smooth min-h-0"
+            className="flex-1 overflow-y-auto scrollbar-thin scroll-smooth min-h-0 relative"
             ref={scrollRef}
         >
-            <div className="max-w-3xl mx-auto px-4 py-8">
+            {/* Subtle Backdrop Decorations - Enhanced for light mode */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+                {/* Gradient orbs - More visible in light mode */}
+                <div className="absolute top-20 -left-20 w-80 h-80 bg-primary/15 dark:bg-primary/5 rounded-full blur-[100px]" />
+                <div className="absolute bottom-40 -right-20 w-96 h-96 bg-chart-2/15 dark:bg-chart-2/5 rounded-full blur-[100px]" />
+
+                {/* Subtle dot pattern - More visible in light mode */}
+                <div
+                    className="absolute inset-0 opacity-[0.04] dark:opacity-[0.02]"
+                    style={{
+                        backgroundImage: `radial-gradient(circle, currentColor 1px, transparent 1px)`,
+                        backgroundSize: '24px 24px',
+                    }}
+                />
+            </div>
+
+            <div className="max-w-3xl mx-auto px-4 py-8 relative">
                 {/* Welcome state */}
                 {state.messages.length === 0 && (
-                    <div className="flex flex-col items-center justify-center text-center py-8">
+                    <div className="flex flex-col items-center justify-center text-center py-8 animate-fade-in-up">
                         <WelcomeIllustration />
 
-                        <h2 className="text-2xl font-bold mb-2">
+                        <h2 className="text-2xl font-bold mb-2 text-gradient">
                             How can I help you?
                         </h2>
                         <p className="text-muted-foreground mb-8 max-w-sm">
-                            I'm Sahara, your AI assistant for bookings and services.
+                            I'm <span className="font-semibold text-foreground">Sahara</span>, your AI assistant for bookings and services.
                         </p>
 
-                        {/* Suggestion buttons */}
+                        {/* Suggestion buttons - Enhanced */}
                         <div className="grid grid-cols-2 gap-3 w-full max-w-md">
-                            {suggestions.map(({ icon: Icon, text, color }) => (
+                            {suggestions.map(({ icon: Icon, text, color }, index) => (
                                 <button
                                     key={text}
                                     onClick={() => handleSuggestionClick(text)}
-                                    className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:border-primary/30 hover:shadow-sm transition-all text-left"
+                                    className="group flex items-center gap-3 p-4 rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300 text-left"
+                                    style={{ animationDelay: `${index * 75}ms` }}
                                 >
-                                    <div className={`w-9 h-9 rounded-lg ${color} flex items-center justify-center`}>
-                                        <Icon className="h-4 w-4" />
+                                    <div className={`w-10 h-10 rounded-xl ${color} flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm`}>
+                                        <Icon className="h-5 w-5" />
                                     </div>
-                                    <span className="text-[13px] font-medium">{text}</span>
+                                    <span className="text-sm font-medium">{text}</span>
                                 </button>
                             ))}
                         </div>
