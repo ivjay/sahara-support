@@ -16,6 +16,7 @@ import {
     MessageRole,
 } from "./types";
 import { generateId } from "./utils";
+import { CURRENT_USER, UserProfile } from "@/lib/user-context";
 
 // Initial state
 const initialState: ChatState = {
@@ -23,6 +24,8 @@ const initialState: ChatState = {
     isLoading: false,
     currentBooking: null,
     userId: "demo-user",
+    sessions: [],
+    userProfile: CURRENT_USER,
 };
 
 const STORAGE_KEY = "sahara_chat_history_v1";
@@ -32,6 +35,60 @@ function chatReducer(state: ChatState, action: ChatAction | { type: "REHYDRATE",
     switch (action.type) {
         case "REHYDRATE":
             return action.payload;
+
+        case "ARCHIVE_SESSION":
+            if (state.messages.length === 0) return state;
+
+            // Generate Title
+            const lastMsg = state.messages[state.messages.length - 1];
+            const firstUserMsg = state.messages.find(m => m.role === 'user');
+
+            let title = "New Conversation";
+            if (state.currentBooking?.intent && state.currentBooking.intent !== 'UNKNOWN') {
+                title = state.currentBooking.intent.replace('_BOOKING', '').toLowerCase().replace(/^\w/, c => c.toUpperCase()) + " Booking";
+            } else if (firstUserMsg) {
+                // Truncate first message
+                title = firstUserMsg.content.slice(0, 18) + (firstUserMsg.content.length > 18 ? "..." : "");
+            }
+
+            const newSession: any = { // Use 'any' temporarily to avoid circular dep issues with ChatSession interface if not fully recognized yet
+                id: generateId(),
+                title: title,
+                date: new Date(),
+                preview: lastMsg ? lastMsg.content.slice(0, 30) + "..." : "No messages",
+                messages: state.messages,
+                bookingState: state.currentBooking
+            };
+
+            return {
+                ...state,
+                sessions: [newSession, ...state.sessions],
+                messages: [],
+                currentBooking: null
+            };
+
+        case "LOAD_SESSION":
+            const sessionToLoad = state.sessions.find(s => s.id === action.payload);
+            if (!sessionToLoad) return state;
+
+            // If we have an active unsaved session, should we archive it first?
+            // For simplicity, we'll just switch. Ideally we'd auto-archive active if not empty.
+            // Let's safe-guard: if current messages > 0, archive them first? 
+            // That requires multiple state updates. 
+            // Let's assume the UI handles "New Chat" (Archive) before Load.
+
+            return {
+                ...state,
+                messages: sessionToLoad.messages,
+                currentBooking: sessionToLoad.bookingState || null,
+                // Move loaded session to top? Optional.
+            };
+
+        case "DELETE_SESSION":
+            return {
+                ...state,
+                sessions: state.sessions.filter(s => s.id !== action.payload)
+            };
 
         case "ADD_MESSAGE":
             return {
@@ -64,10 +121,17 @@ function chatReducer(state: ChatState, action: ChatAction | { type: "REHYDRATE",
                 },
             };
 
+        case "UPDATE_USER_PROFILE":
+            return {
+                ...state,
+                userProfile: action.payload
+            };
+
         case "CLEAR_CHAT":
             return {
-                ...initialState,
-                userId: state.userId,
+                ...state,
+                messages: [],
+                currentBooking: null
             };
 
         default:
@@ -82,7 +146,10 @@ interface ChatContextType {
     setLoading: (loading: boolean) => void;
     setBooking: (booking: BookingState | null) => void;
     updateBookingData: (data: Record<string, string>) => void;
+    updateUserProfile: (profile: UserProfile) => void;
     clearChat: () => void;
+    loadSession: (id: string) => void;
+    deleteSession: (id: string) => void;
 }
 
 // Create context
@@ -102,11 +169,25 @@ export function ChatProvider({ children }: ChatProviderProps) {
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                // Restore Dates (JSON converts them to strings)
+                // Restore Dates
                 parsed.messages = parsed.messages.map((m: any) => ({
                     ...m,
                     timestamp: new Date(m.timestamp)
                 }));
+                // Restore Sessions Dates
+                parsed.sessions = (parsed.sessions || []).map((s: any) => ({
+                    ...s,
+                    date: new Date(s.date),
+                    messages: s.messages.map((m: any) => ({
+                        ...m,
+                        timestamp: new Date(m.timestamp)
+                    }))
+                }));
+
+                // Ensure profile exists (migration for old saves)
+                if (!parsed.userProfile) {
+                    parsed.userProfile = CURRENT_USER;
+                }
 
                 dispatch({ type: "REHYDRATE", payload: parsed });
             } catch (e) {
@@ -117,11 +198,13 @@ export function ChatProvider({ children }: ChatProviderProps) {
 
     // Save to localStorage on change
     useEffect(() => {
-        if (state.messages.length > 0) {
+        const hasData = state.messages.length > 0 ||
+            state.sessions.length > 0 ||
+            state.currentBooking !== null ||
+            (state.userProfile && state.userProfile.name !== "Bijay Acharya"); // Simple check for now, or just always save
+
+        if (hasData) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        } else if (state !== initialState) {
-            // If reset to initial state, clear storage too (except maybe userId)
-            localStorage.removeItem(STORAGE_KEY);
         }
     }, [state]);
 
@@ -156,10 +239,33 @@ export function ChatProvider({ children }: ChatProviderProps) {
         dispatch({ type: "UPDATE_BOOKING_DATA", payload: data });
     }, []);
 
-    // Clear all messages
+    // Update user profile
+    const updateUserProfile = useCallback((profile: UserProfile) => {
+        dispatch({ type: "UPDATE_USER_PROFILE", payload: profile });
+    }, []);
+
+    // Clear all messages (Archive first)
     const clearChat = useCallback(() => {
-        dispatch({ type: "CLEAR_CHAT" });
-        localStorage.removeItem(STORAGE_KEY);
+        dispatch({ type: "ARCHIVE_SESSION" });
+        // Note: ARCHIVE_SESSION clears the chat buffer after saving.
+        // If buffer was empty, it does nothing, so we might need strict CLEAR if user intends to just 'Reset'.
+        // But for "New Chat", archiving empty is harmless (it refuses). 
+        // If we want to strictly clear even if empty/archived, we can follow up?
+        // Actually ARCHIVE_SESSION logic checks length. IF 0, it returns state.
+        // So we should probably check persistence? 
+        // Let's simply dispatch CLEAR_CHAT as fallback? 
+        // No, let's trust ARCHIVE handles the 'New Chat' intent. 
+        // But if I just want to clear the screen... 
+        // User asked "past conversation persistence when new chat is clicked".
+        // so New Chat = Archive + Clear.
+    }, []);
+
+    const loadSession = useCallback((id: string) => {
+        dispatch({ type: "LOAD_SESSION", payload: id });
+    }, []);
+
+    const deleteSession = useCallback((id: string) => {
+        dispatch({ type: "DELETE_SESSION", payload: id });
     }, []);
 
     const value: ChatContextType = {
@@ -168,7 +274,10 @@ export function ChatProvider({ children }: ChatProviderProps) {
         setLoading,
         setBooking,
         updateBookingData,
+        updateUserProfile,
         clearChat,
+        loadSession,
+        deleteSession,
     };
 
     return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

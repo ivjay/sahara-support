@@ -1,7 +1,6 @@
 "use client";
 
 import { ReactNode } from "react";
-import { ChatProvider } from "@/lib/chat/chat-context";
 
 export default function ChatLayout({
     children,
@@ -9,8 +8,8 @@ export default function ChatLayout({
     children: ReactNode;
 }) {
     return (
-        <ChatProvider>
+        <>
             {children}
-        </ChatProvider>
+        </>
     );
 }

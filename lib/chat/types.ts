@@ -1,3 +1,5 @@
+import { UserProfile } from "@/lib/user-context";
+
 // Message roles
 export type MessageRole = "user" | "assistant" | "system";
 
@@ -10,17 +12,6 @@ export type Intent =
     | "MOVIE_BOOKING"
     | "GENERAL_QUERY"
     | "UNKNOWN";
-
-// Individual chat message
-export interface Message {
-    id: string;
-    role: MessageRole;
-    content: string;
-    timestamp: Date;
-    intent?: Intent;
-    options?: BookingOption[];
-    quickReplies?: string[];
-}
 
 // Booking option card displayed to user
 export interface BookingOption {
@@ -35,6 +26,17 @@ export interface BookingOption {
     available: boolean;
 }
 
+// Individual chat message
+export interface Message {
+    id: string;
+    role: MessageRole;
+    content: string;
+    timestamp: Date;
+    intent?: Intent;
+    options?: BookingOption[];
+    quickReplies?: string[];
+}
+
 // Booking flow state
 export interface BookingState {
     intent: Intent;
@@ -44,12 +46,24 @@ export interface BookingState {
     isComplete: boolean;
 }
 
+// Archived session
+export interface ChatSession {
+    id: string;
+    title: string;
+    date: Date;
+    preview: string;
+    messages: Message[];
+    bookingState?: BookingState | null;
+}
+
 // Chat context state
 export interface ChatState {
     messages: Message[];
     isLoading: boolean;
     currentBooking: BookingState | null;
     userId: string;
+    sessions: ChatSession[];
+    userProfile?: UserProfile;
 }
 
 // Action types for chat reducer
@@ -58,7 +72,11 @@ export type ChatAction =
     | { type: "SET_LOADING"; payload: boolean }
     | { type: "SET_BOOKING"; payload: BookingState | null }
     | { type: "CLEAR_CHAT" }
+    | { type: "ARCHIVE_SESSION" }
+    | { type: "LOAD_SESSION"; payload: string }
+    | { type: "DELETE_SESSION"; payload: string }
     | { type: "UPDATE_BOOKING_DATA"; payload: Record<string, string> }
+    | { type: "UPDATE_USER_PROFILE"; payload: UserProfile }
     | { type: "REHYDRATE"; payload: ChatState };
 
 // Required fields per intent

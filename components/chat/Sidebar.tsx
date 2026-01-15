@@ -28,7 +28,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen, onClose, onNewChat }: SidebarProps) {
-    const { state, clearChat } = useChatContext();
+    const { state, clearChat, loadSession, deleteSession } = useChatContext();
     const [isDark, setIsDark] = useState(false);
     const [isLogoHovered, setIsLogoHovered] = useState(false);
 
@@ -151,29 +151,73 @@ export function Sidebar({ isOpen, onClose, onNewChat }: SidebarProps) {
                     </Button>
                 </div>
 
-                {/* Chat History Area - Scrollable */}
                 <ScrollArea className="flex-1 px-3">
-                    {hasActiveChat ? (
-                        <div className="space-y-1 animate-fade-in-up">
-                            <p className="px-2 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                                Current Chat
-                            </p>
-                            <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border border-primary/20 hover-lift cursor-pointer">
-                                <MessageSquare className="h-4 w-4 shrink-0" />
-                                <span className="text-[13px] truncate flex-1 font-medium">
-                                    {state.currentBooking ? "Booking in progress" : "Current Session"}
-                                </span>
+                    <div className="space-y-4 pb-4">
+                        {/* Current Chat Section */}
+                        {hasActiveChat && (
+                            <div className="space-y-1 animate-fade-in-up">
+                                <p className="px-2 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                                    Current Chat
+                                </p>
+                                <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border border-primary/20 hover-lift cursor-pointer">
+                                    <MessageSquare className="h-4 w-4 shrink-0" />
+                                    <span className="text-[13px] truncate flex-1 font-medium">
+                                        {state.currentBooking ? "Booking in progress" : "Current Session"}
+                                    </span>
+                                </div>
                             </div>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in-up">
-                            <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-3">
-                                <MessageSquare className="w-6 h-6 text-muted-foreground" />
+                        )}
+
+                        {/* History Section */}
+                        {state.sessions && state.sessions.length > 0 && (
+                            <div className="space-y-1 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+                                <p className="px-2 py-2 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                                    History
+                                </p>
+                                {state.sessions.map((session) => (
+                                    <div
+                                        key={session.id}
+                                        onClick={() => loadSession(session.id)}
+                                        className="group relative flex flex-col gap-1 px-3 py-2.5 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                                    >
+                                        <div className="flex justify-between items-center w-full">
+                                            <span className="text-[13px] font-medium truncate max-w-[160px]">
+                                                {session.title}
+                                            </span>
+                                            <span className="text-[10px] text-muted-foreground shrink-0">
+                                                {new Date(session.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                            </span>
+                                        </div>
+                                        <p className="text-[11px] text-muted-foreground truncate w-full pr-4">
+                                            {session.preview}
+                                        </p>
+
+                                        {/* Delete Action (Optional, on hover) */}
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteSession(session.id);
+                                            }}
+                                            className="absolute right-2 bottom-2 p-1 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                ))}
                             </div>
-                            <p className="text-sm text-muted-foreground">No chats yet</p>
-                            <p className="text-xs text-muted-foreground/70 mt-1">Start a new conversation</p>
-                        </div>
-                    )}
+                        )}
+
+                        {/* Empty State */}
+                        {!hasActiveChat && (!state.sessions || state.sessions.length === 0) && (
+                            <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in-up">
+                                <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-3">
+                                    <MessageSquare className="w-6 h-6 text-muted-foreground" />
+                                </div>
+                                <p className="text-sm text-muted-foreground">No chats yet</p>
+                                <p className="text-xs text-muted-foreground/70 mt-1">Start a new conversation</p>
+                            </div>
+                        )}
+                    </div>
                 </ScrollArea>
 
                 {/* Bottom Navigation - Fixed at bottom */}
@@ -198,11 +242,13 @@ export function Sidebar({ isOpen, onClose, onNewChat }: SidebarProps) {
                         <Link href="/profile" className="block" onClick={onClose}>
                             <div className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/50 hover:bg-muted transition-all hover-lift cursor-pointer group">
                                 <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-xs font-bold text-primary-foreground shadow-sm group-hover:scale-105 transition-transform">
-                                    BA
+                                    {state.userProfile?.avatarInitials || "U"}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-[13px] font-medium truncate">Bijay Acharya</p>
-                                    <p className="text-[10px] text-muted-foreground">Premium • Verified ✓</p>
+                                    <p className="text-[13px] font-medium truncate">{state.userProfile?.name || "User"}</p>
+                                    <p className="text-[10px] text-muted-foreground">
+                                        {state.userProfile?.accountType || "Free"} • {state.userProfile?.kycStatus === 'Verified' ? 'Verified ✓' : state.userProfile?.kycStatus}
+                                    </p>
                                 </div>
                                 <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 hover:rotate-90 transition-transform">
                                     <MoreHorizontal className="h-4 w-4" />

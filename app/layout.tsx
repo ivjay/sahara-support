@@ -35,6 +35,10 @@ export const metadata: Metadata = {
   },
 };
 
+import { ChatProvider } from "@/lib/chat/chat-context";
+
+// ...
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -45,7 +49,9 @@ export default function RootLayout({
       <body
         className={`${geistMono.variable} font-sans antialiased`}
       >
-        {children}
+        <ChatProvider>
+          {children}
+        </ChatProvider>
       </body>
     </html>
   );

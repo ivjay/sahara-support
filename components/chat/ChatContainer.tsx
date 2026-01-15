@@ -107,7 +107,7 @@ export function ChatContainer({ onOptionSelect }: ChatContainerProps) {
                         <WelcomeIllustration />
 
                         <h2 className="text-2xl font-bold mb-2 text-gradient">
-                            How can I help you, {CURRENT_USER.firstName}?
+                            How can I help you, {state.userProfile?.firstName || "Guest"}?
                         </h2>
                         <p className="text-muted-foreground mb-8 max-w-sm">
                             I'm <span className="font-semibold text-foreground">Sahara</span>, your personal AI assistant for bookings and services.

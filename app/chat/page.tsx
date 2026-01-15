@@ -55,15 +55,16 @@ export default function ChatPage() {
 
         try {
             const response = await handleOptionSelection(option);
+            // 1. Update Booking State FIRST
+            if (response.newBookingState) {
+                setBooking(response.newBookingState);
+            }
+
+            // 2. Add Message (which renders the QR Card)
             addMessage(response.content, "assistant", {
                 options: response.options,
                 quickReplies: response.quickReplies,
             });
-
-            // Check if there's a new booking state (e.g. completion)
-            if (response.newBookingState) {
-                setBooking(response.newBookingState);
-            }
         } catch (error) {
             addMessage("Sorry, couldn't process your selection.", "assistant");
         } finally {

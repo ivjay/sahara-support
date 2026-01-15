@@ -22,45 +22,39 @@ import {
     X as XIcon
 } from "lucide-react";
 import Link from "next/link";
-import { CURRENT_USER } from "@/lib/user-context";
+import { useChatContext } from "@/lib/chat/chat-context";
+import { UserProfile, CURRENT_USER } from "@/lib/user-context";
 
 // Use centralized user context
 const DEFAULT_PROFILE = CURRENT_USER;
 
 export default function ProfilePage() {
+    const { state, updateUserProfile } = useChatContext();
     const [isEditing, setIsEditing] = useState(false);
-    const [profile, setProfile] = useState(DEFAULT_PROFILE);
+    const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
 
-    // Load from localStorage on mount
+    // Sync with global state on mount or when context updates (only if not editing)
     useEffect(() => {
-        const saved = localStorage.getItem("sahara_user_profile");
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                setProfile({ ...DEFAULT_PROFILE, ...parsed });
-            } catch (e) {
-                console.error("Failed to load profile", e);
-            }
+        if (!isEditing && state.userProfile) {
+            setProfile(state.userProfile);
         }
-    }, []);
+    }, [state.userProfile, isEditing]);
 
     const handleSave = () => {
         setIsEditing(false);
-        localStorage.setItem("sahara_user_profile", JSON.stringify(profile));
+        updateUserProfile(profile);
     };
 
     const handleCancel = () => {
         setIsEditing(false);
-        // Reload to reset changes
-        const saved = localStorage.getItem("sahara_user_profile");
-        if (saved) {
-            setProfile({ ...DEFAULT_PROFILE, ...JSON.parse(saved) });
+        if (state.userProfile) {
+            setProfile(state.userProfile);
         } else {
             setProfile(DEFAULT_PROFILE);
         }
     };
 
-    const updateField = (key: string, value: string) => {
+    const updateField = (key: keyof UserProfile, value: string) => {
         setProfile(prev => ({ ...prev, [key]: value }));
     };
 
