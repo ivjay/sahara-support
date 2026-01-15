@@ -2,6 +2,7 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { withRetry, formatApiError } from "@/lib/chat/chat-service";
+import { getUserContextForAI, CURRENT_USER } from "@/lib/user-context";
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
@@ -46,7 +47,7 @@ Output JSON ONLY (no markdown code blocks):
 
 User: "Hi"
 {
-  "content": "Namaste! 🙏 I'm Sahara, your AI assistant. How can I help you today? I can assist with bus tickets, flights, doctor appointments, movie bookings, or home services!",
+  "content": "Namaste ${CURRENT_USER.firstName}! 🙏 How can I help you today? I can assist with bus tickets, flights, doctor appointments, movie bookings, or home services!",
   "showOptions": null,
   "filterCategory": null,
   "quickReplies": ["Book a bus", "Find flights", "Doctor appointment", "Home services"]
@@ -62,11 +63,14 @@ User: "I need a plumber"
 
 User: "Book a bus to Pokhara"
 {
-  "content": "Great choice! 🚌 Here are the available bus options to Pokhara.",
+  "content": "Great choice, ${CURRENT_USER.firstName}! 🚌 Here are the available bus options from ${CURRENT_USER.city} to Pokhara.",
   "showOptions": "BUS_BOOKING",
   "filterCategory": null,
   "quickReplies": ["Morning departure", "Night bus", "Deluxe only"]
-}`;
+}
+
+${getUserContextForAI()}
+`;
 
 export interface AgentResponseAPIType {
     content: string;

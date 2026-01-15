@@ -18,38 +18,10 @@ import {
     Edit3
 } from "lucide-react";
 import Link from "next/link";
+import { CURRENT_USER } from "@/lib/user-context";
 
-// Extended Mock User Data for KYC
-const USER_PROFILE = {
-    // Basic Info
-    name: "Bijay Acharya",
-    email: "bijay.acharya@example.com",
-    phone: "+977 9841XXXXXX",
-    alternatePhone: "+977 9801XXXXXX",
-
-    // Identity
-    idNumber: "NPL-09384723",
-    dateOfBirth: "1995-05-15",
-    gender: "Male",
-    nationality: "Nepali",
-
-    // Address
-    currentAddress: "Baneshwor, Kathmandu",
-    permanentAddress: "Pokhara-12, Kaski",
-    city: "Kathmandu",
-    postalCode: "44600",
-
-    // Emergency Contact
-    emergencyName: "Sita Acharya",
-    emergencyPhone: "+977 9812XXXXXX",
-    emergencyRelation: "Spouse",
-
-    // Account
-    kycStatus: "Verified",
-    memberSince: "January 2024",
-    accountType: "Premium",
-    avatarInitials: "BA"
-};
+// Use centralized user context
+const USER_PROFILE = CURRENT_USER;
 
 export default function ProfilePage() {
     return (

@@ -11,8 +11,8 @@ export interface RateLimitState {
 class ChatRateLimiter {
     private requestCount = 0;
     private windowStart: number = Date.now();
-    // 5 Requests per minute to stay safe within strict quotas (15 RPM is max)
-    private readonly maxRequestsPerMinute = 5;
+    // Increased to 15 requests per minute (Gemini's actual free tier limit)
+    private readonly maxRequestsPerMinute = 15;
     private readonly windowMs = 60 * 1000; // 1 minute window
 
     /**
@@ -42,6 +42,15 @@ class ChatRateLimiter {
     }
 
     /**
+     * Reset the rate limiter (call this when API key changes)
+     */
+    reset(): void {
+        console.log(`[RateLimiter] Manual reset. Old count: ${this.requestCount}`);
+        this.requestCount = 0;
+        this.windowStart = Date.now();
+    }
+
+    /**
      * Get current state for debugging
      */
     getState(): RateLimitState {
@@ -62,17 +71,10 @@ class ChatRateLimiter {
     }
 }
 
-// Global singleton pattern to survive hot reloads in development
-const globalForRateLimiter = globalThis as unknown as {
-    prisma: ChatRateLimiter | undefined;
-    rateLimiter: ChatRateLimiter | undefined;
-};
-
-export const rateLimiter = globalForRateLimiter.rateLimiter ?? new ChatRateLimiter();
-
-if (process.env.NODE_ENV !== 'production') {
-    globalForRateLimiter.rateLimiter = rateLimiter;
-}
+// Create a fresh rate limiter instance
+// Note: In dev mode, Next.js hot reloads will create new instances, which is fine
+// since the rate limiter resets after 1 minute anyway
+export const rateLimiter = new ChatRateLimiter();
 
 /**
  * Delay helper for exponential backoff

@@ -8,6 +8,7 @@ import { TypingIndicator } from "./TypingIndicator";
 import { OptionCard } from "./OptionCard";
 import { BookingOption } from "@/lib/chat/types";
 import { Bus, Plane, Calendar, Ticket } from "lucide-react";
+import { CURRENT_USER } from "@/lib/user-context";
 
 interface ChatContainerProps {
     onOptionSelect?: (option: BookingOption) => void;
@@ -105,10 +106,10 @@ export function ChatContainer({ onOptionSelect }: ChatContainerProps) {
                         <WelcomeIllustration />
 
                         <h2 className="text-2xl font-bold mb-2 text-gradient">
-                            How can I help you?
+                            How can I help you, {CURRENT_USER.firstName}?
                         </h2>
                         <p className="text-muted-foreground mb-8 max-w-sm">
-                            I'm <span className="font-semibold text-foreground">Sahara</span>, your AI assistant for bookings and services.
+                            I'm <span className="font-semibold text-foreground">Sahara</span>, your personal AI assistant for bookings and services.
                         </p>
 
                         {/* Suggestion buttons - Enhanced */}
