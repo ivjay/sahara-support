@@ -15,14 +15,20 @@ import { delay, generateId } from "./utils";
 import { getAgentResponse } from "@/app/actions/chat";
 
 // Helper to get options based on the AI's decision
-function getOptionsByType(type: string): BookingOption[] {
+function getOptionsByType(type: string, filterCategory?: string | null): BookingOption[] {
     switch (type) {
         case "BUS_BOOKING":
             return MOCK_BUS_OPTIONS;
         case "FLIGHT_BOOKING":
             return MOCK_FLIGHT_OPTIONS;
         case "APPOINTMENT":
-            return MOCK_APPOINTMENT_OPTIONS;
+            let options = MOCK_APPOINTMENT_OPTIONS;
+            if (filterCategory) {
+                options = options.filter(opt =>
+                    opt.category?.toLowerCase() === filterCategory.toLowerCase()
+                );
+            }
+            return options;
         case "MOVIE_BOOKING":
             return MOCK_MOVIE_OPTIONS;
         default:
@@ -49,7 +55,7 @@ export async function processMessage(
     // Get options if the AI decided to show them
     let options: BookingOption[] = [];
     if (aiResponse.showOptions) {
-        options = getOptionsByType(aiResponse.showOptions);
+        options = getOptionsByType(aiResponse.showOptions, aiResponse.filterCategory);
     }
 
     return {

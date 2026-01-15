@@ -26,6 +26,7 @@ export interface Message {
 export interface BookingOption {
     id: string;
     type: "bus" | "flight" | "appointment" | "movie";
+    category?: string;
     title: string;
     subtitle: string;
     price?: number;

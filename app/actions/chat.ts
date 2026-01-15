@@ -1,67 +1,77 @@
 "use server";
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import {
-    MOCK_BUS_OPTIONS,
-    MOCK_FLIGHT_OPTIONS,
-    MOCK_APPOINTMENT_OPTIONS,
-    MOCK_MOVIE_OPTIONS,
-    INTENT_KEYWORDS
-} from "@/lib/chat/mock-data";
-import { BookingOption, BookingState } from "@/lib/chat/types";
+import { withRetry, formatApiError } from "@/lib/chat/chat-service";
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-// Construct the Knowledge Base string
-const KNOWLEDGE_BASE = `
-You are Sahara, a helpful and empathetic AI support assistant. Your goal is to help users with:
-1. Bus Bookings (Kathmandu <-> Pokhara routes mainly)
-2. Flight Search (Domestic flights in Nepal)
-3. Doctor Appointments
-4. Movie Ticket Bookings
+/**
+ * LEAN SYSTEM PROMPT - No mock data embedded!
+ * 
+ * The AI understands WHAT it can help with, but the actual data
+ * is fetched client-side based on the AI's intent decision.
+ * 
+ * Token savings: ~2,800 tokens per request (~90% reduction)
+ */
+const SYSTEM_PROMPT = `You are Sahara, a helpful and empathetic AI support assistant from Nepal. 🙏
 
-Here is your currently available inventory (Knowledge Base):
-${JSON.stringify({
-    buses: MOCK_BUS_OPTIONS,
-    flights: MOCK_FLIGHT_OPTIONS,
-    appointments: MOCK_APPOINTMENT_OPTIONS,
-    movies: MOCK_MOVIE_OPTIONS
-}, null, 2)}
+## Your Capabilities
+You can help users with:
+1. **Bus Bookings** - Routes like Kathmandu ↔ Pokhara, Chitwan, etc.
+2. **Flight Search** - Domestic flights within Nepal (Buddha Air, Yeti Airlines, etc.)
+3. **Doctor Appointments** - General physicians, specialists, dentists
+4. **Clinic Visits** - General checkups and consultations
+5. **Movie Tickets** - Cinema bookings at QFX, Big Movies, etc.
+6. **Home Services** - Salon, Plumber, Electrician, Makeup Artist, Tailor
+7. **Education** - College counseling at PBS, Islington, etc.
 
-Your Logic Rules:
-1. **Understand Intent**: Analyze what the user wants. If they are just saying "hi", greet them warmly.
-2. **Missing Information**: If the user wants to book something but hasn't provided enough info (e.g., "I want to go to Pokhara" but didn't say if by bus or flight), ASK clarifying questions.
-3. **Show Options**: ONLY when you have enough information and valid options exist in your Knowledge Base, you MUST trigger the UI to show them.
-4. **Tone**: Be helpful, polite, and clear. Use emojis.
+## Your Behavior Rules
+1. **Greetings**: Respond warmly with "Namaste!" for greetings
+2. **Clarification**: If the user's request is vague, ask clarifying questions
+3. **Show Options**: When you have enough context, set "showOptions" to trigger the UI
+4. **Filter Results**: Use "filterCategory" to narrow down appointment results
+5. **Tone**: Be friendly, professional, and use appropriate emojis
 
-Response Format:
-You must output a JSON object ONLY. Do not include markdown formatting like \`\`\`json.
-Structure:
+## Response Format
+Output JSON ONLY (no markdown code blocks):
 {
-  "content": "Your text response to the user here.",
+  "content": "Your conversational response here",
   "showOptions": "BUS_BOOKING" | "FLIGHT_BOOKING" | "APPOINTMENT" | "MOVIE_BOOKING" | null,
-  "quickReplies": ["Reply 1", "Reply 2", ...]
+  "filterCategory": "doctor" | "college" | "salon" | "plumber" | "electrician" | "makeup" | "tailor" | "clinic" | null,
+  "quickReplies": ["Suggestion 1", "Suggestion 2"]
 }
 
-Example 1 (User: "I want a bus to Pokhara"):
-{
-  "content": "I can help with that! We have several buses leaving for Pokhara tomorrow. Here are the best options:",
-  "showOptions": "BUS_BOOKING",
-  "quickReplies": ["Cheapest option", "Morning departure"]
-}
+## Examples
 
-Example 2 (User: "Hi"):
+User: "Hi"
 {
-  "content": "Namaste! 🙏 I'm Sahara. How can I help you today? I can assist with bus tickets, flights, doctor appointments, or movies.",
+  "content": "Namaste! 🙏 I'm Sahara, your AI assistant. How can I help you today? I can assist with bus tickets, flights, doctor appointments, movie bookings, or home services!",
   "showOptions": null,
-  "quickReplies": ["Book a bus", "Find a flight", "Doctor appointment"]
+  "filterCategory": null,
+  "quickReplies": ["Book a bus", "Find flights", "Doctor appointment", "Home services"]
 }
-`;
+
+User: "I need a plumber"
+{
+  "content": "I can help you find a reliable plumber! 🔧 Let me show you available options.",
+  "showOptions": "APPOINTMENT",
+  "filterCategory": "plumber",
+  "quickReplies": ["Emergency service", "Schedule for later"]
+}
+
+User: "Book a bus to Pokhara"
+{
+  "content": "Great choice! 🚌 Here are the available bus options to Pokhara.",
+  "showOptions": "BUS_BOOKING",
+  "filterCategory": null,
+  "quickReplies": ["Morning departure", "Night bus", "Deluxe only"]
+}`;
 
 export interface AgentResponseAPIType {
     content: string;
     showOptions?: "BUS_BOOKING" | "FLIGHT_BOOKING" | "APPOINTMENT" | "MOVIE_BOOKING" | null;
+    filterCategory?: string | null;
     quickReplies?: string[];
 }
 
@@ -70,49 +80,53 @@ export async function getAgentResponse(
     history: { role: "user" | "model"; parts: string }[] = []
 ): Promise<AgentResponseAPIType> {
     try {
-        const model = genAI.getGenerativeModel({
-            model: "gemini-flash-latest",
-            generationConfig: { responseMimeType: "application/json" }
-        });
+        const response = await withRetry(async () => {
+            const model = genAI.getGenerativeModel({
+                model: "gemini-flash-latest",
+                generationConfig: { responseMimeType: "application/json" }
+            });
 
-        const chat = model.startChat({
-            history: [
-                {
-                    role: "user",
-                    parts: [{ text: KNOWLEDGE_BASE }]
-                },
-                {
-                    role: "model",
-                    parts: [{ text: "Understood. I am Sahara, ready to assist based on the knowledge base and rules provided." }]
-                },
-                ...history.map(h => ({
-                    role: h.role,
-                    parts: [{ text: h.parts }]
-                }))
-            ],
-        });
+            const chat = model.startChat({
+                history: [
+                    {
+                        role: "user",
+                        parts: [{ text: SYSTEM_PROMPT }]
+                    },
+                    {
+                        role: "model",
+                        parts: [{ text: '{"content":"Understood. I am Sahara, ready to assist!","showOptions":null,"filterCategory":null,"quickReplies":[]}' }]
+                    },
+                    ...history.map(h => ({
+                        role: h.role,
+                        parts: [{ text: h.parts }]
+                    }))
+                ],
+            });
 
-        const result = await chat.sendMessage(message);
-        const responseText = result.response.text();
+            const result = await chat.sendMessage(message);
+            return result.response.text();
+        });
 
         try {
-            const parsed = JSON.parse(responseText);
+            const parsed = JSON.parse(response);
             return parsed;
-        } catch (e) {
-            console.error("JSON Parse Error:", e);
+        } catch (parseError) {
+            console.error("JSON Parse Error:", parseError);
             return {
-                content: "I'm having a little trouble connecting right now. Could you say that again?",
+                content: "I'm having trouble processing that. Could you rephrase?",
                 showOptions: null,
-                quickReplies: ["Try again"]
+                filterCategory: null,
+                quickReplies: ["Try again", "Start over"]
             };
         }
 
     } catch (error) {
         console.error("Gemini API Error:", error);
         return {
-            content: "Sorry, I'm currently offline. Please try again later.",
+            content: formatApiError(error),
             showOptions: null,
-            quickReplies: []
+            filterCategory: null,
+            quickReplies: ["Try again"]
         };
     }
 }
