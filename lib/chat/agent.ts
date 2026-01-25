@@ -24,10 +24,24 @@ function getOptionsByType(type: string, filterCategory?: string | null): Booking
         case "APPOINTMENT":
             let options = MOCK_APPOINTMENT_OPTIONS;
             if (filterCategory) {
-                options = options.filter(opt =>
-                    opt.category?.toLowerCase() === filterCategory.toLowerCase()
-                );
+                const query = filterCategory.toLowerCase();
+                // Smart filtering: Check category AND specialization/title keywords
+                options = options.filter(opt => {
+                    const matchCategory = opt.category?.toLowerCase() === query;
+                    const matchSpecialization = opt.details.specialization?.toLowerCase().includes(query);
+                    const matchSubtitle = opt.subtitle?.toLowerCase().includes(query);
+
+                    // Specific mapping for common terms
+                    const kidneyMatch = query.includes('kidney') &&
+                        (opt.details.specialization?.toLowerCase().includes('kidney') ||
+                            opt.subtitle?.toLowerCase().includes('nephrologist') ||
+                            opt.subtitle?.toLowerCase().includes('urologist'));
+
+                    return matchCategory || matchSpecialization || matchSubtitle || kidneyMatch;
+                });
             }
+            // If filtering yields no results, fall back to showing all for that type, or handle gracefully.
+            // For now, we return the filtered list even if empty, so the UI can say "No specific X found".
             return options;
         case "MOVIE_BOOKING":
             return MOCK_MOVIE_OPTIONS;
