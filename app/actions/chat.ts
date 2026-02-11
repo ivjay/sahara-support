@@ -4,77 +4,28 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { withRetry, formatApiError } from "@/lib/chat/chat-service";
 import { getUserContextForAI, CURRENT_USER } from "@/lib/user-context";
 import { generateContentWithGitHub } from "@/lib/chat/github-service";
+import { SAHARA_SYSTEM_PROMPT, detectLanguage, parseBookingResponse } from "@/lib/chat/system-prompt-v2";
+import { chat as ollamaChat } from "@/lib/integrations/ollama-service";
+import {
+    saveConversation,
+    createBooking,
+    generateConversationId,
+    type ConversationStage,
+    type BookingType
+} from "@/lib/supabase";
 
-// Initialize Gemini
+// Initialize Gemini (fallback)
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-
-/**
- * LEAN SYSTEM PROMPT - No mock data embedded!
- * 
- * The AI understands WHAT it can help with, but the actual data
- * is fetched client-side based on the AI's intent decision.
- * 
- * Token savings: ~2,800 tokens per request (~90% reduction)
- */
-const SYSTEM_PROMPT = `You are Sahara, a helpful and empathetic AI support assistant from Nepal. 🙏
-
-## Your Capabilities
-You can help users with:
-1. **Bus Bookings** - Routes like Kathmandu ↔ Pokhara, Chitwan, etc.
-2. **Flight Search** - Domestic flights within Nepal (Buddha Air, Yeti Airlines, etc.)
-3. **Doctor Appointments** - General physicians, specialists, dentists
-4. **Clinic Visits** - General checkups and consultations
-5. **Movie Tickets** - Cinema bookings at QFX, Big Movies, etc.
-6. **Home Services** - Salon, Plumber, Electrician, Makeup Artist, Tailor
-7. **Education** - College counseling at PBS, Islington, etc.
-
-## Your Behavior Rules
-1. **Greetings**: Respond warmly with "Namaste!" for greetings
-2. **Clarification**: If the user's request is vague, ask clarifying questions
-3. **Show Options**: When you have enough context, set "showOptions" to trigger the UI
-4. **Filter Results**: Use "filterCategory" to narrow down appointment results
-5. **Tone**: Be friendly, professional, and use appropriate emojis
-
-## Response Format
-Output JSON ONLY (no markdown code blocks):
-{
-  "content": "Your conversational response here",
-  "showOptions": "BUS_BOOKING" | "FLIGHT_BOOKING" | "APPOINTMENT" | "MOVIE_BOOKING" | null,
-  "filterCategory": "doctor" | "college" | "salon" | "plumber" | "electrician" | "makeup" | "tailor" | "clinic" | null,
-  "quickReplies": ["Suggestion 1", "Suggestion 2"]
-}
-
-## Examples
-
-User: "Hi"
-{
-  "content": "Namaste ${CURRENT_USER.firstName}! 🙏 How can I help you today? I can assist with bus tickets, flights, doctor appointments, movie bookings, or home services!",
-  "showOptions": null,
-  "filterCategory": null,
-  "quickReplies": ["Book a bus", "Find flights", "Doctor appointment", "Home services"]
-}
-
-User: "I need a plumber"
-{
-  "content": "I can help you find a reliable plumber! 🔧 Let me show you available options.",
-  "showOptions": "APPOINTMENT",
-  "filterCategory": "plumber",
-  "quickReplies": ["Emergency service", "Schedule for later"]
-}
-
-User: "Book a bus to Pokhara"
-{
-  "content": "Great choice, ${CURRENT_USER.firstName}! 🚌 Here are the available bus options from ${CURRENT_USER.city} to Pokhara.",
-  "showOptions": "BUS_BOOKING",
-  "filterCategory": null,
-  "quickReplies": ["Morning departure", "Night bus", "Deluxe only"]
-}
-
-${getUserContextForAI()}
-`;
 
 export interface AgentResponseAPIType {
     content: string;
+    stage?: string;
+    language?: string;
+    booking_type?: string | null;
+    collected_details?: Record<string, any>;
+    ready_to_book?: boolean;
+    booking?: any;
+    // Legacy fields for backwards compatibility
     showOptions?: "BUS_BOOKING" | "FLIGHT_BOOKING" | "APPOINTMENT" | "MOVIE_BOOKING" | null;
     filterCategory?: string | null;
     quickReplies?: string[];
@@ -82,36 +33,130 @@ export interface AgentResponseAPIType {
 
 export async function getAgentResponse(
     message: string,
-    history: { role: "user" | "model"; parts: string }[] = []
+    history: { role: "user" | "model"; parts: string }[] = [],
+    conversationId?: string
 ): Promise<AgentResponseAPIType> {
-    // 1. Try GitHub Models (Primary)
+
+    // Generate conversation ID if not provided
+    const convId = conversationId || generateConversationId();
+
+    // Detect user's language
+    const userLanguage = detectLanguage(message);
+
+    // 1. Try Ollama (Primary - New System Prompt v2.0)
+    if (process.env.OLLAMA_BASE_URL) {
+        try {
+            console.log("[Chat] 🦙 Using Ollama with System Prompt v2.0...");
+
+            // Convert history to Ollama format
+            const ollamaMessages = [
+                { role: 'system' as const, content: SAHARA_SYSTEM_PROMPT },
+                ...history.map(h => ({
+                    role: (h.role === 'model' ? 'assistant' : 'user') as 'user' | 'assistant',
+                    content: h.parts
+                })),
+                { role: 'user' as const, content: message }
+            ];
+
+            const response = await ollamaChat(ollamaMessages, { temperature: 0.7 });
+
+            // Parse response using helper function
+            const parsed = parseBookingResponse(response.message.content);
+
+            // Save conversation to Supabase
+            if (parsed.stage) {
+                const conversationMessages = [
+                    ...history.map(h => ({
+                        role: h.role === 'model' ? 'assistant' as const : 'user' as const,
+                        content: h.parts,
+                        timestamp: new Date().toISOString()
+                    })),
+                    {
+                        role: 'user' as const,
+                        content: message,
+                        timestamp: new Date().toISOString()
+                    },
+                    {
+                        role: 'assistant' as const,
+                        content: parsed.message,
+                        timestamp: new Date().toISOString()
+                    }
+                ];
+
+                await saveConversation(
+                    convId,
+                    conversationMessages,
+                    parsed.stage as ConversationStage,
+                    parsed.language as 'en' | 'ne' || userLanguage,
+                    undefined, // userId - can be added later
+                    parsed.collected_details
+                );
+            }
+
+            // Create booking if ready
+            if (parsed.ready_to_book && parsed.booking) {
+                const bookingResult = await createBooking(
+                    parsed.booking_type as BookingType,
+                    parsed.booking,
+                    undefined, // userId
+                    parsed.booking.total_price
+                );
+
+                if (bookingResult.success) {
+                    console.log("[Chat] ✓ Created booking:", bookingResult.bookingId);
+                    // Update message with booking ID
+                    parsed.message += `\n\n📋 Your booking ID is: **${bookingResult.bookingId}**`;
+                }
+            }
+
+            return {
+                content: parsed.message,
+                stage: parsed.stage,
+                language: parsed.language,
+                booking_type: parsed.booking_type,
+                collected_details: parsed.collected_details,
+                ready_to_book: parsed.ready_to_book,
+                booking: parsed.booking,
+                // Map to legacy format for UI compatibility
+                showOptions: mapStageToShowOptions(parsed.stage, parsed.booking_type),
+                filterCategory: null,
+                quickReplies: []
+            };
+
+        } catch (error: any) {
+            console.warn("[Chat] Ollama Error:", error.message);
+            console.log("[Chat] ⚠️ Falling back to Gemini...");
+        }
+    }
+
+    // 2. Try GitHub Models (Secondary)
     if (process.env.GITHUB_TOKEN) {
         try {
-            // Convert history format for GitHub/OpenAI
             const ghMessages = history.map(h => ({
                 role: h.role === "model" ? "assistant" : "user",
                 content: h.parts
             }));
-            // Add current message
             ghMessages.push({ role: "user", content: message });
 
             const response = await withRetry(async () => {
-                return await generateContentWithGitHub(SYSTEM_PROMPT, ghMessages);
+                return await generateContentWithGitHub(SAHARA_SYSTEM_PROMPT, ghMessages);
             });
 
-            try {
-                return JSON.parse(response);
-            } catch (parseError) {
-                console.error("GitHub JSON Parse Error:", parseError);
-                // Continue to Gemini fallback
-            }
+            const parsed = parseBookingResponse(response);
+            return {
+                content: parsed.message,
+                stage: parsed.stage,
+                language: parsed.language,
+                showOptions: mapStageToShowOptions(parsed.stage, parsed.booking_type),
+                filterCategory: null,
+                quickReplies: []
+            };
         } catch (error: any) {
-            console.warn("GitHub Models Error (Primary):", error.message);
-            console.log("⚠️ Switching to Gemini Fallback...");
+            console.warn("[Chat] GitHub Models Error:", error.message);
         }
     }
 
-    // 2. Gemini Fallback (or Primary if no GitHub token)
+    // 3. Gemini Fallback (Tertiary)
     try {
         const response = await withRetry(async () => {
             const model = genAI.getGenerativeModel({
@@ -123,11 +168,11 @@ export async function getAgentResponse(
                 history: [
                     {
                         role: "user",
-                        parts: [{ text: SYSTEM_PROMPT }]
+                        parts: [{ text: SAHARA_SYSTEM_PROMPT }]
                     },
                     {
                         role: "model",
-                        parts: [{ text: '{"content":"Understood. I am Sahara, ready to assist!","showOptions":null,"filterCategory":null,"quickReplies":[]}' }]
+                        parts: [{ text: '{"message":"Understood. I am Sahara, ready to assist!","stage":"greeting","language":"en","booking_type":null,"ready_to_book":false}' }]
                     },
                     ...history.map(h => ({
                         role: h.role,
@@ -140,20 +185,100 @@ export async function getAgentResponse(
             return result.response.text();
         });
 
-        try {
-            return JSON.parse(response);
-        } catch (parseError) {
-            console.error("Gemini JSON Parse Error:", parseError);
-            throw parseError;
-        }
+        const parsed = parseBookingResponse(response);
+        return {
+            content: parsed.message,
+            stage: parsed.stage,
+            language: parsed.language,
+            showOptions: mapStageToShowOptions(parsed.stage, parsed.booking_type),
+            filterCategory: null,
+            quickReplies: []
+        };
 
     } catch (error) {
-        console.error("All AI Services Failed:", error);
+        console.error("[Chat] All AI Services Failed:", error);
         return {
             content: formatApiError(error),
+            stage: 'greeting',
+            language: 'en',
             showOptions: null,
             filterCategory: null,
             quickReplies: ["Try again"]
+        };
+    }
+}
+
+/**
+ * Map conversation stage to legacy showOptions format for UI compatibility
+ */
+function mapStageToShowOptions(
+    stage?: string,
+    bookingType?: string | null
+): "BUS_BOOKING" | "FLIGHT_BOOKING" | "APPOINTMENT" | "MOVIE_BOOKING" | null {
+    if (stage === 'confirming' && bookingType) {
+        switch (bookingType) {
+            case 'bus': return 'BUS_BOOKING';
+            case 'flight': return 'FLIGHT_BOOKING';
+            case 'doctor':
+            case 'salon': return 'APPOINTMENT';
+            case 'movie': return 'MOVIE_BOOKING';
+        }
+    }
+    return null;
+}
+
+/**
+ * Simplified interface for chat page - wraps getAgentResponse
+ */
+export interface SendMessageResponse {
+    success: boolean;
+    message: string;
+    conversationId?: string;
+    bookingType?: string;
+    booking?: {
+        success: boolean;
+        bookingId?: string;
+        details?: Record<string, any>;
+    };
+    error?: string;
+}
+
+export async function sendMessage(
+    userMessage: string,
+    conversationId?: string
+): Promise<SendMessageResponse> {
+    try {
+        // Generate or use existing conversation ID
+        const convId = conversationId || generateConversationId();
+
+        // Get AI response with full conversation tracking
+        const response = await getAgentResponse(userMessage, [], convId);
+
+        // Prepare the response
+        const result: SendMessageResponse = {
+            success: true,
+            message: response.content,
+            conversationId: convId,
+            bookingType: response.booking_type || undefined,
+        };
+
+        // If booking is ready, include booking details
+        if (response.ready_to_book && response.booking) {
+            result.booking = {
+                success: true,
+                bookingId: `BK${Date.now()}`, // Generate simple booking ID
+                details: response.collected_details || response.booking
+            };
+        }
+
+        return result;
+
+    } catch (error: any) {
+        console.error("[sendMessage] Error:", error);
+        return {
+            success: false,
+            message: "Sorry, something went wrong. Please try again.",
+            error: error.message || "Unknown error"
         };
     }
 }

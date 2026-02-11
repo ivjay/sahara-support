@@ -13,6 +13,7 @@
     "@azure/core-auth": "^1.10.1",
     "@base-ui/react": "^1.0.0",
     "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.95.3",
     "@types/ws": "^8.18.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

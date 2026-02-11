@@ -188,15 +188,29 @@ export async function processMessage(
         }
     }
 
-    // Call AI
+    // Call AI with empty history for now (we can add conversation history later)
     const aiResponse = await getAgentResponse(userMessage, []);
 
     console.log("[Agent] AI Response:", aiResponse);
 
-    let finalFilterCategory = aiResponse.filterCategory;
+    // Map new System Prompt v2.0 response to legacy format
+    let showOptions = aiResponse.showOptions;
+    let filterCategory = aiResponse.filterCategory;
+
+    // Handle new v2.0 format: map booking_type + stage to showOptions
+    if (!showOptions && aiResponse.booking_type && aiResponse.stage === 'confirming') {
+        const typeMap: Record<string, "BUS_BOOKING" | "FLIGHT_BOOKING" | "APPOINTMENT" | "MOVIE_BOOKING"> = {
+            'bus': 'BUS_BOOKING',
+            'flight': 'FLIGHT_BOOKING',
+            'doctor': 'APPOINTMENT',
+            'salon': 'APPOINTMENT',
+            'movie': 'MOVIE_BOOKING'
+        };
+        showOptions = typeMap[aiResponse.booking_type] || null;
+    }
 
     // Smart extraction: If AI didn't provide filterCategory but mentioned a specialty
-    if (!finalFilterCategory && aiResponse.content) {
+    if (!filterCategory && aiResponse.content) {
         const content = aiResponse.content.toLowerCase();
 
         // Extract specialty keywords from AI response
@@ -216,7 +230,7 @@ export async function processMessage(
 
         for (const [specialty, pattern] of Object.entries(specialtyKeywords)) {
             if (pattern.test(content)) {
-                finalFilterCategory = specialty;
+                filterCategory = specialty;
                 console.log(`[Agent] Extracted specialty from content: ${specialty}`);
                 break;
             }
@@ -225,9 +239,9 @@ export async function processMessage(
 
     // Fetch options if needed
     let finalOptions: BookingOption[] | undefined;
-    if (aiResponse.showOptions) {
-        finalOptions = getOptionsByType(aiResponse.showOptions, finalFilterCategory, allServices);
-        console.log(`[Agent] Filtered ${finalOptions.length} options for ${aiResponse.showOptions} with category ${finalFilterCategory || 'none'}`);
+    if (showOptions) {
+        finalOptions = getOptionsByType(showOptions, filterCategory, allServices);
+        console.log(`[Agent] Filtered ${finalOptions.length} options for ${showOptions} with category ${filterCategory || 'none'}`);
     }
 
     return {
