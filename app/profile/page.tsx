@@ -24,6 +24,8 @@ import {
 import Link from "next/link";
 import { useChatContext } from "@/lib/chat/chat-context";
 import { UserProfile, CURRENT_USER } from "@/lib/user-context";
+import { useBookings } from "@/lib/services/booking-context";
+import { Ticket, Clock, ExternalLink } from "lucide-react";
 
 // Use centralized user context
 const DEFAULT_PROFILE = CURRENT_USER;
@@ -139,6 +141,10 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Personal Information */}
+
+                {/* My Bookings History */}
+                <BookingsSection />
+
                 <SectionCard title="Personal Information" icon={User}>
                     <div className="grid gap-4 sm:grid-cols-2">
                         <InfoField
@@ -269,6 +275,53 @@ export default function ProfilePage() {
 
             </div>
         </main>
+    );
+}
+
+// Bookings Section Component
+function BookingsSection() {
+    const { bookings, clearHistory } = useBookings();
+
+    if (bookings.length === 0) return null;
+
+    return (
+        <SectionCard title="My Booking History" icon={Ticket}>
+            <div className="space-y-3">
+                {bookings.map((booking) => (
+                    <div key={booking.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/50 transition-colors gap-3">
+                        <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${booking.type === 'bus' ? 'bg-orange-500/10 text-orange-600' :
+                                    booking.type === 'flight' ? 'bg-blue-500/10 text-blue-600' :
+                                        booking.type === 'movie' ? 'bg-purple-500/10 text-purple-600' :
+                                            'bg-green-500/10 text-green-600'
+                                }`}>
+                                {booking.type === 'bus' ? <span className="text-lg">🚌</span> :
+                                    booking.type === 'flight' ? <span className="text-lg">✈️</span> :
+                                        booking.type === 'movie' ? <span className="text-lg">🎬</span> :
+                                            <span className="text-lg">🏥</span>}
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-sm">{booking.title}</h3>
+                                <p className="text-xs text-muted-foreground">{booking.subtitle} • {new Date(booking.date).toLocaleDateString()}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3 justify-end">
+                            <span className="text-xs font-bold px-2 py-1 bg-green-500/10 text-green-600 rounded-md border border-green-500/20">
+                                {booking.status}
+                            </span>
+                        </div>
+                    </div>
+                ))}
+
+                {bookings.length > 0 && (
+                    <div className="pt-2 flex justify-end">
+                        <Button variant="ghost" size="sm" onClick={clearHistory} className="text-xs text-destructive hover:bg-destructive/10">
+                            Clear History
+                        </Button>
+                    </div>
+                )}
+            </div>
+        </SectionCard>
     );
 }
 

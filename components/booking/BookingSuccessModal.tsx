@@ -59,6 +59,17 @@ export function BookingSuccessModal({ booking, onClose }: BookingSuccessModalPro
         valid: true
     });
 
+    // Check payment status
+    const isPayAtCounter = booking.collectedData?.cash === "true";
+    const statusColor = isPayAtCounter ? "bg-orange-500" : "bg-green-500";
+    const statusIcon = isPayAtCounter ? <Clock className="w-8 h-8 text-white" strokeWidth={3} /> : <CheckCircle2 className="w-8 h-8 text-white" strokeWidth={3} />;
+
+    // Dynamic Title
+    const modalTitle = isPayAtCounter ? "Reservation Pending" : title;
+    const instruction = isPayAtCounter
+        ? "Present this QR at the counter to complete payment"
+        : "Scan this QR code at the counter";
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
             {/* Backdrop */}
@@ -67,8 +78,8 @@ export function BookingSuccessModal({ booking, onClose }: BookingSuccessModalPro
                 onClick={onClose}
             />
 
-            {/* Confetti Effect */}
-            {showConfetti && (
+            {/* Confetti Effect - Only for confirmed payments */}
+            {showConfetti && !isPayAtCounter && (
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
                     <div className="absolute top-0 left-1/4 w-2 h-2 bg-red-500 rounded-full animate-ping" style={{ animationDuration: '1s' }} />
                     <div className="absolute top-10 right-1/4 w-3 h-3 bg-blue-500 rounded-full animate-ping" style={{ animationDuration: '1.5s', animationDelay: '0.2s' }} />
@@ -92,10 +103,10 @@ export function BookingSuccessModal({ booking, onClose }: BookingSuccessModalPro
                     <div className="absolute -bottom-3 -left-3 w-6 h-6 rounded-full bg-background border border-border/50 z-10" />
                     <div className="absolute -bottom-3 -right-3 w-6 h-6 rounded-full bg-background border border-border/50 z-10" />
 
-                    <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center shadow-lg shadow-green-500/20 mb-4 animate-in zoom-in spin-in-12 duration-500">
-                        <CheckCircle2 className="w-8 h-8 text-white" strokeWidth={3} />
+                    <div className={`w-16 h-16 rounded-full ${statusColor} flex items-center justify-center shadow-lg mb-4 animate-in zoom-in spin-in-12 duration-500`}>
+                        {statusIcon}
                     </div>
-                    <h2 className="text-xl font-bold text-center">{title}</h2>
+                    <h2 className="text-xl font-bold text-center">{modalTitle}</h2>
                     <p className="text-sm text-muted-foreground mt-1 font-mono">Ref: {pnr}</p>
                 </div>
 
@@ -144,7 +155,7 @@ export function BookingSuccessModal({ booking, onClose }: BookingSuccessModalPro
                             />
                         </div>
                         <div className="text-center">
-                            <p className="text-[10px] text-muted-foreground">Scan this QR code at the counter</p>
+                            <p className="text-[10px] text-muted-foreground">{instruction}</p>
                             <p className="text-[9px] text-muted-foreground/60 mt-0.5">Issued: {formattedTimestamp}</p>
                         </div>
                     </div>

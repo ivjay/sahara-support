@@ -3,6 +3,7 @@
 import { useRef, useEffect } from "react";
 // import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatContext } from "@/lib/chat/chat-context";
+import { useServices } from "@/lib/services/service-context";
 import { ChatMessage } from "./ChatMessage";
 import { TypingIndicator } from "./TypingIndicator";
 import { OptionCard } from "./OptionCard";
@@ -49,6 +50,7 @@ const suggestions = [
 
 export function ChatContainer({ onOptionSelect }: ChatContainerProps) {
     const { state, addMessage, setLoading } = useChatContext();
+    const { services } = useServices();
     const scrollRef = useRef<HTMLDivElement>(null);
 
     // Auto-scroll to bottom on new messages
@@ -67,7 +69,7 @@ export function ChatContainer({ onOptionSelect }: ChatContainerProps) {
         setLoading(true);
 
         try {
-            const response = await processMessage(text, state.currentBooking);
+            const response = await processMessage(text, state.currentBooking, services);
             addMessage(response.content, "assistant", {
                 options: response.options,
                 quickReplies: response.quickReplies,
@@ -139,8 +141,8 @@ export function ChatContainer({ onOptionSelect }: ChatContainerProps) {
 
 
 
-                        {/* Show options if present - Grid Layout */}
-                        {message.options && message.options.length > 0 && (
+                        {/* Show options if present - Grid Layout (Hide during verification) */}
+                        {message.options && message.options.length > 0 && !message.content.includes("Verifying") && (
                             <div className="ml-12 mb-6 max-w-2xl">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {message.options.map((option) => (

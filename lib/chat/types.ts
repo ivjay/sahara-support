@@ -16,7 +16,7 @@ export type Intent =
 // Booking option card displayed to user
 export interface BookingOption {
     id: string;
-    type: "bus" | "flight" | "appointment" | "movie" | "payment_qr";
+    type: "bus" | "flight" | "appointment" | "movie" | "payment_qr" | "payment_cash";
     category?: string;
     title: string;
     subtitle: string;
@@ -34,6 +34,7 @@ export interface Message {
     timestamp: Date;
     intent?: Intent;
     options?: BookingOption[];
+    receipt?: Record<string, any>; // JSON data for the receipt
     quickReplies?: string[];
 }
 

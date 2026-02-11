@@ -9,6 +9,8 @@ import { User, HeartHandshake, Copy, Check } from "lucide-react";
 import { useState } from "react";
 import { useChatContext } from "@/lib/chat/chat-context";
 import { processMessage } from "@/lib/chat/agent";
+import { useServices } from "@/lib/services/service-context";
+import { ReceiptCard } from "./ReceiptCard";
 
 interface ChatMessageProps {
     message: Message;
@@ -51,6 +53,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
     const isUser = message.role === "user";
     const [copied, setCopied] = useState(false);
     const { addMessage, setLoading } = useChatContext();
+    const { services } = useServices();
 
     const copyToClipboard = () => {
         navigator.clipboard.writeText(message.content);
@@ -63,7 +66,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
         setLoading(true);
 
         try {
-            const response = await processMessage(reply, null);
+            const response = await processMessage(reply, null, services);
             addMessage(response.content, "assistant", {
                 options: response.options,
                 quickReplies: response.quickReplies,
@@ -111,8 +114,13 @@ export function ChatMessage({ message }: ChatMessageProps) {
                     </div>
                 </div>
 
+                {/* Inline Receipt Card */}
+                {!isUser && message.receipt && (
+                    <ReceiptCard data={message.receipt as any} />
+                )}
+
                 {/* Quick Replies with stagger animation */}
-                {!isUser && message.quickReplies && message.quickReplies.length > 0 && (
+                {!isUser && message.quickReplies && message.quickReplies.length > 0 && !message.content.includes("Verifying") && (
                     <div className="flex flex-wrap gap-2 mt-3">
                         {message.quickReplies.map((reply, index) => (
                             <Button
