@@ -1,9 +1,7 @@
 import { UserProfile } from "@/lib/user-context";
 
-// Message roles
 export type MessageRole = "user" | "assistant" | "system";
 
-// User intents the agent can detect
 export type Intent =
     | "GREETING"
     | "BUS_BOOKING"
@@ -13,17 +11,23 @@ export type Intent =
     | "GENERAL_QUERY"
     | "UNKNOWN";
 
-// Booking option card displayed to user
+/**
+ * STANDARDIZED BookingOption structure
+ * Used by BOTH mocks and admin-created services
+ * 
+ * CRITICAL: details must be Record<string, string> - ALL values are strings!
+ */
 export interface BookingOption {
     id: string;
     type: "bus" | "flight" | "appointment" | "movie" | "payment_qr" | "payment_cash";
-    category?: string;
-    title: string;
-    subtitle: string;
-    price?: number;
-    currency?: string;
-    details: Record<string, string>;
+    category?: string; // doctor, salon, plumber, event, standup, concert, etc.
+    title: string; // Main display name
+    subtitle: string; // Secondary info (location, route, cinema)
+    price: number;
+    currency: string;
+    details: Record<string, string>; // ALL values must be strings!
     available: boolean;
+    qrCodeUrl?: string;
 }
 
 // Individual chat message
@@ -34,7 +38,7 @@ export interface Message {
     timestamp: Date;
     intent?: Intent;
     options?: BookingOption[];
-    receipt?: Record<string, any>; // JSON data for the receipt
+    receipt?: Record<string, any>;
     quickReplies?: string[];
 }
 
@@ -80,7 +84,6 @@ export type ChatAction =
     | { type: "UPDATE_USER_PROFILE"; payload: UserProfile }
     | { type: "REHYDRATE"; payload: ChatState };
 
-// Required fields per intent
 export const INTENT_REQUIRED_FIELDS: Record<Intent, string[]> = {
     GREETING: [],
     BUS_BOOKING: ["from", "to", "date", "passengers"],
@@ -91,7 +94,6 @@ export const INTENT_REQUIRED_FIELDS: Record<Intent, string[]> = {
     UNKNOWN: [],
 };
 
-// Questions to ask for each field
 export const FIELD_QUESTIONS: Record<string, string> = {
     from: "Where would you like to travel from?",
     to: "Where would you like to go?",
@@ -106,3 +108,41 @@ export const FIELD_QUESTIONS: Record<string, string> = {
     theater: "Which theater or cinema?",
     seats: "How many seats do you need?",
 };
+
+/**
+ * STANDARD DETAIL FIELD NAMES
+ * Use these consistently across mocks and admin forms
+ */
+export const STANDARD_DETAILS = {
+    // Common fields
+    rating: "rating",
+
+    // Doctor/Appointment fields
+    hospital: "hospital",
+    clinic: "clinic",
+    experience: "experience",
+    nextSlot: "nextSlot",
+    specialization: "specialization",
+    specialist: "specialist",
+
+    // Transport fields (bus/flight)
+    departure: "departure",
+    arrival: "arrival",
+    duration: "duration",
+    busType: "busType",
+    aircraft: "aircraft",
+    class: "class",
+    seats: "seats",
+    route: "route",
+
+    // Movie/Event fields
+    showtime: "showtime",
+    language: "language",
+    format: "format",
+    venue: "venue",
+
+    // Service fields (salon, plumber, etc.)
+    location: "location",
+    responseTime: "responseTime",
+    delivery: "delivery"
+} as const;

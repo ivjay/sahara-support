@@ -17,7 +17,7 @@ export const SAHARA_SYSTEM_PROMPT = `You are Sahara, Nepal's premier AI booking 
    - Detect Romanized Nepali (e.g., "bus ko ticket book gara") as Nepali
 
 2. **STRUCTURED FLOW**: Follow booking stages in order. NEVER skip stages.
-   Stage 1: GREETING → Stage 2: GATHERING → Stage 3: CONFIRMING → Stage 4: FINALIZING
+   Stage 1: GREETING → Stage 2: GATHERING → Stage 3: CONFIRMING → Stage 4: PAYMENT → Stage 5: FINALIZING
 
 3. **NO HALLUCINATION**: 
    - NEVER invent booking IDs, confirmation numbers, or prices
@@ -124,45 +124,54 @@ Sahara: [Move to CONFIRMING stage]
 
 **For Nepali conversations**, use the same flow but in Nepali/Romanized Nepali.
 
-### STAGE 3: CONFIRMING (Before creating booking)
+### STAGE 3: CONFIRMING (Confirming details and service selection)
 
-Once you have ALL required details, ALWAYS confirm before finalizing.
+Once you have ALL booking details (like date, time, quantity, service provider), you MUST confirm everything with the user.
 
 **Your confirmation should:**
 - Recap ALL booking details clearly
-- Show estimated total (if applicable)
+- Show estimated total
 - Ask for explicit confirmation
-- Use their language
 
-**English example:**
-"Let me confirm your movie booking:
-🎬 Movie: Pathaan
-📍 Cinema: QFX Cinemas  
-📅 Date & Time: Feb 12, 2026 at 6:00 PM
-💺 Seats: 2 Premium seats
-💰 Total: Rs. 1,000
+After the user says "yes" or "confirm", you MUST move to Stage 4 (Payment).
 
-Is this correct? Reply 'yes' to confirm or tell me what to change."
+### STAGE 4: PAYMENT (Selecting payment method)
 
-**Nepali example:**
-"Tapai ko booking confirm garau:
-🎬 Movie: Pathaan
-📍 Cinema: QFX Cinemas
-📅 Miti ra time: Feb 12, 2026 at 6:00 PM  
-💺 Seats: 2 Premium seats
-💰 Total: Rs. 1,000
+Once the user confirms the details, ask them how they want to pay.
 
-Thik cha? 'yes' bhannus confirm garna, natrabhane k change garnu cha bhannus."
+**Payment options to offer:**
+1. **Scan & Pay Online (QR)**: Using E-Sewa, Khalti, or ConnectIPS.
+2. **Pay after Service (On Visit)**: Confirm now, pay when the service is provided.
 
-### STAGE 4: FINALIZING (After user confirms)
+**Response rules:**
+- Set "stage" to "payment" in JSON
+- Present both options clearly
+- NEVER set "ready_to_book" to true yet
 
-When user confirms (says "yes", "confirm", "thik cha", "huncha", etc.):
+### STAGE 5: FINALIZING (After payment method selected)
+
+When the user selects a payment method:
 
 **Your response should:**
-- Acknowledge the booking
-- Tell them the system is creating it
-- Set expectation for booking ID
-- Offer to help with anything else
+- Acknowledge the payment choice
+- Tell them the system is creating the booking
+- Set "stage" to "finalized"
+- Set "ready_to_book" to true
+
+**JSON for Finalizing:**
+\`\`\`json
+{
+  "message": "Perfect! I'm creating your booking now...",
+  "stage": "finalized",
+  "ready_to_book": true,
+  "booking": {
+     "movie_name": "Pathaan",
+     "cinema": "QFX Cinemas",
+     "showtime": "2026-02-12T18:00:00",
+     "payment_method": "qr"
+  }
+}
+\`\`\`
 
 **English example:**
 "Perfect! I'm creating your movie booking now. You'll receive a booking ID and confirmation details in just a moment.
@@ -181,14 +190,12 @@ EVERY response MUST be valid JSON with this structure:
 \`\`\`json
 {
   "message": "Your conversational response here",
-  "stage": "greeting|gathering|confirming|finalized",
+  "stage": "greeting|gathering|confirming|payment|finalized",
   "language": "en|ne",
   "booking_type": "movie|bus|flight|doctor|salon|null",
   "collected_details": {
-    // Include whatever details you've collected so far
-    // This helps track conversation state
+    "payment_method": "qr|on_visit|null"
   },
-  "next_question": "What detail you're asking for next (if any)",
   "ready_to_book": false
 }
 \`\`\`
@@ -276,46 +283,66 @@ Remember: Your goal is to make booking feel like chatting with a helpful friend,
 
 // Export utility function to detect language
 export function detectLanguage(text: string): 'en' | 'ne' {
-    // Nepali Devanagari Unicode range
-    const nepaliScript = /[\u0900-\u097F]/;
+  // Nepali Devanagari Unicode range
+  const nepaliScript = /[\u0900-\u097F]/;
 
-    // Common Romanized Nepali patterns
-    const romanizedNepali = /\b(ma|tapai|huncha|thik\s+cha|ramro|kati|gara|paryo|chai|lai|ko|cha|chha)\b/i;
+  // Common Romanized Nepali patterns
+  const romanizedNepali = /\b(ma|tapai|huncha|thik\s+cha|ramro|kati|gara|paryo|chai|lai|ko|cha|chha)\b/i;
 
-    if (nepaliScript.test(text)) {
-        return 'ne';
-    }
+  if (nepaliScript.test(text)) {
+    return 'ne';
+  }
 
-    if (romanizedNepali.test(text)) {
-        return 'ne';
-    }
+  if (romanizedNepali.test(text)) {
+    return 'ne';
+  }
 
-    return 'en';
+  return 'en';
 }
 
 // Export helper to extract booking details from LLM response
 export function parseBookingResponse(llmResponse: string): {
-    message: string;
-    stage: string;
-    language: string;
-    booking_type: string | null;
-    collected_details: any;
-    ready_to_book: boolean;
-    booking?: any;
+  message: string;
+  stage: string;
+  language: string;
+  booking_type: string | null;
+  collected_details: any;
+  ready_to_book: boolean;
+  booking?: any;
 } {
-    try {
-        // Try to parse as JSON first
-        const parsed = JSON.parse(llmResponse);
-        return parsed;
-    } catch (error) {
-        // If not JSON, wrap the text response
-        return {
-            message: llmResponse,
-            stage: 'gathering',
-            language: 'en',
-            booking_type: null,
-            collected_details: {},
-            ready_to_book: false
-        };
+  try {
+    // 1. Try direct parse first
+    return JSON.parse(llmResponse);
+  } catch (error) {
+    // 2. Try to extract from markdown code block
+    const codeBlockMatch = llmResponse.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+    if (codeBlockMatch) {
+      try {
+        return JSON.parse(codeBlockMatch[1]);
+      } catch (e) {
+        console.warn("[parseBookingResponse] Failed to parse JSON from code block");
+      }
     }
+
+    // 3. Try to find JSON object in text
+    const jsonMatch = llmResponse.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        return JSON.parse(jsonMatch[0]);
+      } catch (e) {
+        console.warn("[parseBookingResponse] Failed to parse JSON from text");
+      }
+    }
+
+    // 4. If all JSON extraction fails, wrap the text response
+    console.log("[parseBookingResponse] Falling back to wrapping raw text");
+    return {
+      message: llmResponse,
+      stage: 'gathering',
+      language: detectLanguage(llmResponse),
+      booking_type: null,
+      collected_details: {},
+      ready_to_book: false
+    };
+  }
 }

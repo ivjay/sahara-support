@@ -23,6 +23,7 @@ export interface OllamaChatRequest {
         top_p?: number;
         max_tokens?: number;
     };
+    format?: 'json' | string;
 }
 
 export interface OllamaChatResponse {
@@ -64,14 +65,31 @@ async function httpRequest(
                 data += chunk;
             });
             res.on('end', () => {
+                if (!data) {
+                    console.warn(`[Ollama] Empty response from ${url}`);
+                    resolve({ message: { role: 'assistant', content: '' }, done: true });
+                    return;
+                }
+
                 try {
                     const parsed = JSON.parse(data);
                     resolve(parsed);
                 } catch (error) {
-                    // If not JSON, return raw data
-                    resolve(data);
+                    console.error('[Ollama] JSON Parse Error:', error, 'Raw data:', data);
+                    // If not JSON, but has content, wrap it
+                    resolve({
+                        message: { role: 'assistant', content: data },
+                        done: true,
+                        error: 'Failed to parse JSON response'
+                    });
                 }
             });
+        });
+
+        // Set timeout to prevent hanging the whole app (60s for local LLMs)
+        req.setTimeout(60000, () => {
+            req.destroy();
+            reject(new Error('Ollama request timed out after 60 seconds. The model might be loading or the server is slow. Check your CPU/GPU usage.'));
         });
 
         req.on('error', (error) => {
@@ -109,6 +127,7 @@ export async function chat(
                 model: OLLAMA_MODEL,
                 messages,
                 stream: options?.stream || false,
+                format: 'json',
                 options: {
                     temperature: options?.temperature || 0.7,
                 },
@@ -125,7 +144,29 @@ export async function chat(
             const endTime = Date.now();
             console.log(`[Ollama] ✓ Inference completed in ${endTime - startTime}ms`);
 
-            return response as OllamaChatResponse;
+            let chatResponse = response;
+
+            // Ensure response has the expected structure
+            if (!chatResponse || typeof chatResponse !== 'object') {
+                // If it's a string, wrap it
+                if (typeof chatResponse === 'string') {
+                    chatResponse = { message: { role: 'assistant', content: chatResponse } };
+                } else {
+                    throw new Error('Invalid response from Ollama server');
+                }
+            }
+
+            if (!chatResponse.message) {
+                // If it's the tag response or something else, wrap it
+                if (chatResponse.content) {
+                    chatResponse.message = { role: 'assistant', content: chatResponse.content };
+                } else {
+                    console.warn('[Ollama] Unexpected response structure:', chatResponse);
+                    chatResponse.message = { role: 'assistant', content: JSON.stringify(chatResponse) };
+                }
+            }
+
+            return chatResponse as OllamaChatResponse;
         } catch (error) {
             lastError = error as Error;
             console.error(`[Ollama] ✗ Attempt ${attempt}/${maxRetries} failed:`, error);

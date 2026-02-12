@@ -1,18 +1,22 @@
 "use client";
 
-import { BookingOption } from "@/lib/chat/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Stethoscope, Clock, MapPin, Award } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { BookingOption, STANDARD_DETAILS } from "@/lib/chat/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-interface ServiceFormProps {
+interface DoctorFormProps {
     data: Partial<BookingOption>;
     onChange: (data: Partial<BookingOption>) => void;
 }
 
-export function DoctorForm({ data, onChange }: ServiceFormProps) {
-    const updateDetails = (key: string, value: string) => {
+export function DoctorForm({ data, onChange }: DoctorFormProps) {
+    const updateField = (field: keyof BookingOption, value: any) => {
+        onChange({ ...data, [field]: value });
+    };
+
+    const updateDetail = (key: string, value: string) => {
         onChange({
             ...data,
             details: { ...data.details, [key]: value }
@@ -20,102 +24,112 @@ export function DoctorForm({ data, onChange }: ServiceFormProps) {
     };
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-            <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label>Doctor Name</Label>
-                        <div className="relative">
-                            <Stethoscope className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Dr. John Doe"
-                                className="pl-9"
-                                value={data.title || ""}
-                                onChange={e => onChange({ ...data, title: e.target.value })}
-                            />
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Specialization (Title)</Label>
-                        <Input
-                            placeholder="Senior Cardiologist"
-                            value={data.subtitle || ""}
-                            onChange={e => onChange({ ...data, subtitle: e.target.value })}
-                        />
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <Label>Hospital / Clinic</Label>
-                    <div className="relative">
-                        <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="City Hospital, Room 302"
-                            className="pl-9"
-                            value={data.details?.hospital || ""}
-                            onChange={e => updateDetails("hospital", e.target.value)}
-                        />
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label>Consultation Fee (NPR)</Label>
-                        <Input
-                            type="number"
-                            placeholder="500"
-                            value={data.price || ""}
-                            onChange={e => onChange({ ...data, price: Number(e.target.value) })}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Experience</Label>
-                        <div className="relative">
-                            <Award className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="10 years"
-                                className="pl-9"
-                                value={data.details?.experience || ""}
-                                onChange={e => updateDetails("experience", e.target.value)}
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label>Next Available Slot</Label>
-                        <div className="relative">
-                            <Clock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Tomorrow 10:00 AM"
-                                className="pl-9"
-                                value={data.details?.nextSlot || ""}
-                                onChange={e => updateDetails("nextSlot", e.target.value)}
-                            />
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Category (Internal)</Label>
-                        <Input
-                            placeholder="doctor"
-                            value={data.category || "doctor"}
-                            onChange={e => onChange({ ...data, category: e.target.value })}
-                        />
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <Label>Specialization Keywords (for Search)</Label>
+        <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <Label>Doctor Name *</Label>
                     <Input
-                        placeholder="kidney, heart, surgery (comma separated)"
-                        value={data.details?.specialization || ""}
-                        onChange={e => updateDetails("specialization", e.target.value)}
+                        placeholder="Dr. John Doe"
+                        value={data.title || ""}
+                        onChange={(e) => updateField("title", e.target.value)}
                     />
-                    <p className="text-[11px] text-muted-foreground">
-                        Used by AI to find this doctor (e.g. "kidney" matches "Nephrologist")
-                    </p>
                 </div>
+                <div>
+                    <Label>Specialty *</Label>
+                    <Select
+                        value={data.subtitle || ""}
+                        onValueChange={(value) => {
+                            updateField("subtitle", value);
+                            updateField("category", "doctor");
+                        }}
+                    >
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select specialty" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="General Physician">General Physician</SelectItem>
+                            <SelectItem value="Cardiologist">Cardiologist</SelectItem>
+                            <SelectItem value="Dentist">Dentist</SelectItem>
+                            <SelectItem value="Dermatologist">Dermatologist</SelectItem>
+                            <SelectItem value="Gynecologist">Gynecologist</SelectItem>
+                            <SelectItem value="Urologist">Urologist</SelectItem>
+                            <SelectItem value="Nephrologist">Nephrologist</SelectItem>
+                            <SelectItem value="Pediatrician">Pediatrician</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <Label>Hospital/Clinic</Label>
+                    <Input
+                        placeholder="City Hospital"
+                        value={data.details?.hospital || ""}
+                        onChange={(e) => updateDetail(STANDARD_DETAILS.hospital, e.target.value)}
+                    />
+                </div>
+                <div>
+                    <Label>Experience</Label>
+                    <Input
+                        placeholder="15 years"
+                        value={data.details?.experience || ""}
+                        onChange={(e) => updateDetail(STANDARD_DETAILS.experience, e.target.value)}
+                    />
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <Label>Next Available Slot</Label>
+                    <Input
+                        placeholder="Tomorrow 10:00 AM"
+                        value={data.details?.nextSlot || ""}
+                        onChange={(e) => updateDetail(STANDARD_DETAILS.nextSlot, e.target.value)}
+                    />
+                </div>
+                <div>
+                    <Label>Consultation Fee (NPR)</Label>
+                    <Input
+                        type="number"
+                        placeholder="500"
+                        value={data.price || ""}
+                        onChange={(e) => updateField("price", Number(e.target.value))}
+                    />
+                </div>
+            </div>
+
+            <div>
+                <Label>QR Code URL (Optional)</Label>
+                <Input
+                    placeholder="https://example.com/qr-code.png"
+                    value={data.qrCodeUrl || ""}
+                    onChange={(e) => updateField("qrCodeUrl", e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                    Provide a direct link to the QR code image for payments.
+                </p>
+            </div>
+
+            <div>
+                <Label>Rating (optional)</Label>
+                <Input
+                    placeholder="⭐ 4.8"
+                    value={data.details?.rating || ""}
+                    onChange={(e) => updateDetail(STANDARD_DETAILS.rating, e.target.value)}
+                />
+            </div>
+
+            <div>
+                <Label>Additional Specialization (for search)</Label>
+                <Input
+                    placeholder="Kidney & Urinary Tract"
+                    value={data.details?.specialization || ""}
+                    onChange={(e) => updateDetail(STANDARD_DETAILS.specialization, e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                    This helps users find this doctor (e.g., "heart disease", "skin care")
+                </p>
             </div>
         </div>
     );

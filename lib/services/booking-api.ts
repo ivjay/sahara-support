@@ -19,14 +19,14 @@ export const BookingApi = {
         return res.json();
     },
 
-    async verify(id: string): Promise<BookingRecord> {
-        const res = await fetch('/api/verify', {
-            method: 'POST',
+    async verify(id: string, status: 'Confirmed' | 'Cancelled' = 'Confirmed'): Promise<BookingRecord> {
+        const res = await fetch('/api/bookings', {
+            method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, status: 'Confirmed' }),
+            body: JSON.stringify({ id, status }),
             cache: 'no-store'
         });
-        if (!res.ok) throw new Error("Failed to verify booking");
+        if (!res.ok) throw new Error("Failed to update booking status");
         return res.json();
     },
 

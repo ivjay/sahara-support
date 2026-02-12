@@ -10,7 +10,7 @@ import { useState } from "react";
 import { useChatContext } from "@/lib/chat/chat-context";
 import { processMessage } from "@/lib/chat/agent";
 import { useServices } from "@/lib/services/service-context";
-import { ReceiptCard } from "./ReceiptCard";
+import { Receipt } from "./Receipt";
 
 interface ChatMessageProps {
     message: Message;
@@ -116,7 +116,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
                 {/* Inline Receipt Card */}
                 {!isUser && message.receipt && (
-                    <ReceiptCard data={message.receipt as any} />
+                    <Receipt data={message.receipt as any} />
                 )}
 
                 {/* Quick Replies with stagger animation */}

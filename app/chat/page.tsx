@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef } from "react";
 import { useChatContext } from "@/lib/chat/chat-context";
 import { ChatContainer } from "@/components/chat/ChatContainer";
 import { ChatInput } from "@/components/chat/ChatInput";
@@ -16,7 +16,8 @@ import { sendMessage as newSendMessage } from "@/app/actions/chat";
 export default function ChatPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [conversationId, setConversationId] = useState<string>("");
-    
+    const conversationHistoryRef = useRef<Array<{ role: "user" | "assistant"; content: string }>>([]);
+
     const {
         state,
         addMessage,
@@ -26,22 +27,43 @@ export default function ChatPage() {
     const { addBooking } = useBookings();
 
     const handleSend = useCallback(async (text: string) => {
+        if (!text.trim()) return;
+
+        // Add user message to UI
         addMessage(text, "user");
         setLoading(true);
 
         try {
-            const response = await newSendMessage(text, conversationId);
+            console.log("[Chat] Sending message:", text);
 
-            if (!response.success) {
-                throw new Error(response.error || "Failed to process message");
-            }
+            // Call new system with full conversation history
+            const response = await newSendMessage(
+                text,
+                conversationId,
+                conversationHistoryRef.current
+            );
 
+            console.log("[Chat] Response received:", response);
+
+            // Store conversation ID
             if (response.conversationId && !conversationId) {
                 setConversationId(response.conversationId);
             }
 
-            addMessage(response.message, "assistant");
+            // Update conversation history
+            conversationHistoryRef.current = [
+                ...conversationHistoryRef.current,
+                { role: "user", content: text },
+                { role: "assistant", content: response.content }
+            ];
 
+            // Add AI response with options and quick replies
+            addMessage(response.content, "assistant", {
+                options: response.options,
+                quickReplies: response.quickReplies,
+            });
+
+            // Handle booking if created
             if (response.booking?.success && response.booking.bookingId) {
                 const bookingId = response.booking.bookingId;
                 const bookingData = response.booking.details || {};
@@ -50,26 +72,22 @@ export default function ChatPage() {
                     id: bookingId,
                     serviceId: bookingData.serviceId || bookingId,
                     type: response.bookingType || "unknown",
-                    title: bookingData.movie_name || 
-                           bookingData.service_type || 
-                           bookingData.doctor_specialty || 
-                           bookingData.from || 
-                           "Service",
-                    subtitle: bookingData.cinema || 
-                              bookingData.salon_name || 
-                              bookingData.clinic_name || 
-                              bookingData.to || 
-                              "",
-                    date: new Date(bookingData.showtime || 
-                                  bookingData.appointment_date || 
-                                  bookingData.travel_date || 
-                                  new Date()),
+                    title: bookingData.movie_name ||
+                        bookingData.service_type ||
+                        bookingData.doctor_specialty ||
+                        "Service",
+                    subtitle: bookingData.cinema ||
+                        bookingData.salon_name ||
+                        bookingData.clinic_name ||
+                        "",
+                    date: new Date(bookingData.showtime ||
+                        bookingData.appointment_date ||
+                        new Date()),
                     status: "Confirmed",
                     amount: `NPR ${bookingData.total_price || 0}`,
                     details: bookingData
                 };
 
-                console.log("[Chat] Saving booking:", newRecord);
                 await addBooking(newRecord);
 
                 const receiptData = {
@@ -85,26 +103,33 @@ export default function ChatPage() {
                     timestamp: new Date().toISOString()
                 };
 
-                const confirmMsg = `🎉 **Booking Confirmed!**\n\nYour ${response.bookingType} booking is confirmed.\nBooking ID: **${bookingId}**\n\nHere is your receipt:`;
-
-                addMessage(confirmMsg, "assistant", { receipt: receiptData });
+                addMessage(
+                    `🎉 Booking confirmed! ID: **${bookingId}**`,
+                    "assistant",
+                    { receipt: receiptData }
+                );
             }
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("[Chat] Error:", error);
-            addMessage("Sorry, something went wrong. Please try again.", "assistant");
+
+            const errorMessage = error.message === 'Request timeout'
+                ? "Sorry, the request took too long. Please try again."
+                : "Sorry, something went wrong. Please try again.";
+
+            addMessage(errorMessage, "assistant");
         } finally {
             setLoading(false);
         }
     }, [conversationId, addMessage, setLoading, addBooking, state.userProfile]);
 
     const handleOptionSelect = useCallback(async (option: BookingOption) => {
-        const message = option.title;
-        await handleSend(message);
+        await handleSend(option.title);
     }, [handleSend]);
 
     const handleNewChat = () => {
         setConversationId("");
+        conversationHistoryRef.current = [];
         setSidebarOpen(false);
     };
 
@@ -138,7 +163,7 @@ export default function ChatPage() {
                     </Button>
                     <div className="flex items-center gap-2 ml-2">
                         <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-                            <HeartHandshake className="w-4 w-4 text-primary-foreground" strokeWidth={1.5} />
+                            <HeartHandshake className="w-4 h-4 text-primary-foreground" strokeWidth={1.5} />
                         </div>
                         <span className="font-semibold text-sm">Sahara</span>
                     </div>
@@ -152,7 +177,10 @@ export default function ChatPage() {
                 </header>
 
                 <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-                    <ChatContainer onOptionSelect={handleOptionSelect} />
+                    <ChatContainer 
+                        onOptionSelect={handleOptionSelect}
+                        onSend={handleSend}
+                    />
                 </div>
 
                 <ChatInput

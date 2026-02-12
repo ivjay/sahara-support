@@ -64,7 +64,7 @@ export function TransportForm({ data, onChange, type }: ServiceFormProps) {
                         <Label>{type === 'bus' ? 'Vehicle Type' : 'Aircraft'}</Label>
                         <Input
                             placeholder={type === 'bus' ? "AC Deluxe Sofa" : "ATR 72"}
-                            value={type === 'bus' ? data.details?.busType : data.details?.aircraft}
+                            value={(type === 'bus' ? data.details?.busType : data.details?.aircraft) || ""}
                             onChange={e => updateDetails(type === 'bus' ? "busType" : "aircraft", e.target.value)}
                         />
                     </div>

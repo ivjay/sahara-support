@@ -1,19 +1,17 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-// import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatContext } from "@/lib/chat/chat-context";
-import { useServices } from "@/lib/services/service-context";
 import { ChatMessage } from "./ChatMessage";
 import { TypingIndicator } from "./TypingIndicator";
 import { OptionCard } from "./OptionCard";
 import { BookingOption } from "@/lib/chat/types";
 import { Bus, Plane, Calendar, Ticket } from "lucide-react";
-import { CURRENT_USER } from "@/lib/user-context";
 import { QRCodeCard } from "./QRCodeCard";
 
 interface ChatContainerProps {
     onOptionSelect?: (option: BookingOption) => void;
+    onSend?: (text: string) => void;
 }
 
 // SVG Illustration for welcome state
@@ -48,9 +46,8 @@ const suggestions = [
     { icon: Ticket, text: "Movie tickets", color: "bg-purple-500/10 text-purple-600" },
 ];
 
-export function ChatContainer({ onOptionSelect }: ChatContainerProps) {
-    const { state, addMessage, setLoading } = useChatContext();
-    const { services } = useServices();
+export function ChatContainer({ onOptionSelect, onSend }: ChatContainerProps) {
+    const { state } = useChatContext();
     const scrollRef = useRef<HTMLDivElement>(null);
 
     // Auto-scroll to bottom on new messages
@@ -61,23 +58,9 @@ export function ChatContainer({ onOptionSelect }: ChatContainerProps) {
     }, [state.messages, state.isLoading]);
 
     // Handle suggestion click
-    const handleSuggestionClick = async (text: string) => {
-        // Import and use processMessage
-        const { processMessage, getWelcomeMessage } = await import("@/lib/chat/agent");
-
-        addMessage(text, "user");
-        setLoading(true);
-
-        try {
-            const response = await processMessage(text, state.currentBooking, services);
-            addMessage(response.content, "assistant", {
-                options: response.options,
-                quickReplies: response.quickReplies,
-            });
-        } catch (error) {
-            addMessage("Sorry, something went wrong. Please try again.", "assistant");
-        } finally {
-            setLoading(false);
+    const handleSuggestionClick = (text: string) => {
+        if (onSend) {
+            onSend(text);
         }
     };
 
@@ -138,8 +121,6 @@ export function ChatContainer({ onOptionSelect }: ChatContainerProps) {
                 {state.messages.map((message) => (
                     <div key={message.id}>
                         <ChatMessage message={message} />
-
-
 
                         {/* Show options if present - Grid Layout (Hide during verification) */}
                         {message.options && message.options.length > 0 && !message.content.includes("Verifying") && (

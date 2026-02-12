@@ -50,7 +50,7 @@ export function QRCodeCard({ option }: QRCodeCardProps) {
 
             <div className="text-center mb-4">
                 <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">Total Amount</p>
-                <p className="text-lg font-bold">NPR {option.price || 500}</p>
+                <p className="text-lg font-bold">{option.currency || "NPR"} {option.price || 0}</p>
             </div>
 
             <Button onClick={handlePaid} className="w-full">

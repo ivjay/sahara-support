@@ -89,4 +89,5 @@ export const db: BookingRepository = {
         await writeDb(all);
         return all[index];
     }
+    
 };

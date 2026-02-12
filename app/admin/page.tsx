@@ -58,41 +58,52 @@ export default function AdminPage() {
     });
 
     const handleAddService = () => {
-        if (!newService.title) {
-            alert("Title is required!");
-            return;
-        }
+    if (!newService.title) {
+        alert("Title is required!");
+        return;
+    }
 
-        const id = `svc-${Date.now()}`;
+    const id = `svc-${Date.now()}`;
 
-        // Auto-assign category if missing, crucial for AI filtering
-        let finalCategory = newService.category;
-        if (!finalCategory) {
-            if (serviceType === 'appointment') finalCategory = 'doctor';
-            else if (serviceType === 'bus') finalCategory = 'bus';
-            else if (serviceType === 'flight') finalCategory = 'flight';
-            else if (serviceType === 'movie') finalCategory = 'movie';
-        }
+    // ✅ Auto-assign category based on type
+    let finalCategory = newService.category;
+    if (!finalCategory) {
+        if (serviceType === 'appointment') finalCategory = 'doctor';
+        else if (serviceType === 'bus') finalCategory = 'transport';
+        else if (serviceType === 'flight') finalCategory = 'transport';
+        else if (serviceType === 'movie') finalCategory = 'event';
+    }
 
-        addService({
-            id,
-            title: newService.title,
-            subtitle: newService.subtitle || "Service Provider",
-            type: serviceType, // Use component state type
-            price: Number(newService.price) || 0,
-            currency: "NPR",
-            available: true,
-            details: {
-                ...newService.details,
-                specialization: newService.details?.specialization || newService.title
-            },
-            category: finalCategory
+    // ✅ CRITICAL: Ensure ALL detail values are strings
+    const stringifiedDetails: Record<string, string> = {};
+    if (newService.details) {
+        Object.entries(newService.details).forEach(([key, value]) => {
+            stringifiedDetails[key] = String(value); // Force to string
         });
+    }
 
-        setIsAddMode(false);
-        // Reset
-        setNewService({ type: "appointment", currency: "NPR", available: true, details: {}, category: "doctor" });
-    };
+    addService({
+        id,
+        title: newService.title!,
+        subtitle: newService.subtitle || "Service Provider",
+        type: serviceType,
+        price: Number(newService.price) || 0,
+        currency: newService.currency || "NPR",
+        available: true,
+        details: stringifiedDetails,
+        category: finalCategory
+    });
+
+    setIsAddMode(false);
+    // Reset
+    setNewService({ 
+        type: "appointment", 
+        currency: "NPR", 
+        available: true, 
+        details: {}, 
+        category: "doctor" 
+    });
+};
 
     const getIcon = (type: string) => {
         switch (type) {

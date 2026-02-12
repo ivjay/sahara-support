@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageSquare, Plus, Settings, HelpCircle, X, Moon, Sun } from "lucide-react";
+import { MessageSquare, Plus, Settings, HelpCircle, X, Moon, Sun, HeartHandshake } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useChatContext } from "@/lib/chat/chat-context";
 import { useState, useEffect } from "react";
@@ -57,7 +57,12 @@ export function Sidebar({ isOpen, onClose, onNewChat }: SidebarProps) {
             >
                 {/* Header */}
                 <div className="h-14 px-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-800">
-                    <h2 className="font-semibold text-sm">Sahara</h2>
+                    <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center shadow-sm">
+                            <HeartHandshake className="w-4 h-4 text-white" strokeWidth={1.5} />
+                        </div>
+                        <h2 className="font-semibold text-sm">Sahara</h2>
+                    </div>
                     <div className="flex items-center gap-1">
                         <Button
                             variant="ghost"

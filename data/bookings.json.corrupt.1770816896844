@@ -1,0 +1,412 @@
+[
+  {
+    "id": "bk-1770648136265",
+    "serviceId": "bus-1",
+    "type": "BUS_BOOKING",
+    "title": "Deluxe Express",
+    "subtitle": "Deluxe Express",
+    "date": "2026-02-09T14:42:16.265Z",
+    "status": "Pending Payment",
+    "amount": "NPR 1200",
+    "details": {
+      "serviceId": "bus-1",
+      "from": "Deluxe Express",
+      "to": "Kathmandu → Pokhara",
+      "date": "2/9/2026",
+      "specialist": "Deluxe Express",
+      "time": "6:00 AM",
+      "price": "NPR 1200",
+      "cash": "true"
+    }
+  },
+  {
+    "id": "bk-1770645956024",
+    "serviceId": "svc-6",
+    "type": "APPOINTMENT",
+    "title": "Family Care Clinic",
+    "subtitle": "Family Care Clinic",
+    "date": "2026-02-09T14:05:56.024Z",
+    "status": "Confirmed",
+    "amount": "NPR 400",
+    "details": {
+      "serviceId": "svc-6",
+      "from": "Family Care Clinic",
+      "to": "General Checkup",
+      "date": "2/1/2026",
+      "specialist": "Family Care Clinic",
+      "price": "NPR 400",
+      "cash": "true"
+    }
+  },
+  {
+    "id": "bk-1769917850578",
+    "serviceId": "svc-6",
+    "type": "APPOINTMENT",
+    "title": "Family Care Clinic",
+    "subtitle": "Family Care Clinic",
+    "date": "2026-02-01T03:50:50.578Z",
+    "status": "Confirmed",
+    "amount": "NPR 400",
+    "details": {
+      "serviceId": "svc-6",
+      "from": "Family Care Clinic",
+      "to": "General Checkup",
+      "date": "2/1/2026",
+      "specialist": "Family Care Clinic",
+      "price": "NPR 400",
+      "cash": "true"
+    }
+  },
+  {
+    "id": "bk-1769917433594",
+    "serviceId": "svc-6",
+    "type": "APPOINTMENT",
+    "title": "Family Care Clinic",
+    "subtitle": "Family Care Clinic",
+    "date": "2026-02-01T03:43:53.594Z",
+    "status": "Confirmed",
+    "amount": "NPR 400",
+    "details": {
+      "serviceId": "svc-6",
+      "from": "Family Care Clinic",
+      "to": "General Checkup",
+      "date": "2/1/2026",
+      "specialist": "Family Care Clinic",
+      "price": "NPR 400",
+      "cash": "true"
+    }
+  },
+  {
+    "id": "bk-1769917006840",
+    "serviceId": "apt-1",
+    "type": "APPOINTMENT",
+    "title": "Dr. Sharma",
+    "subtitle": "City Hospital",
+    "date": "2026-02-01T03:36:46.840Z",
+    "status": "Pending Payment",
+    "amount": "NPR 500",
+    "details": {
+      "serviceId": "apt-1",
+      "from": "Dr. Sharma",
+      "to": "General Physician",
+      "date": "2/1/2026",
+      "specialist": "Dr. Sharma",
+      "hospital": "City Hospital",
+      "price": "NPR 500",
+      "cash": "true"
+    }
+  },
+  {
+    "id": "bk-1769916796436",
+    "serviceId": "apt-4",
+    "type": "APPOINTMENT",
+    "title": "Dr. Karki",
+    "subtitle": "Skin Care Center",
+    "date": "2026-02-01T03:33:16.436Z",
+    "status": "Pending Payment",
+    "amount": "NPR 1200",
+    "details": {
+      "serviceId": "apt-4",
+      "from": "Dr. Karki",
+      "to": "Dermatologist",
+      "date": "2/1/2026",
+      "specialist": "Dr. Karki",
+      "hospital": "Skin Care Center",
+      "price": "NPR 1200",
+      "cash": "true"
+    }
+  },
+  {
+    "id": "bk-1769909879549",
+    "serviceId": "apt-4",
+    "type": "APPOINTMENT",
+    "title": "Dr. Karki",
+    "subtitle": "Skin Care Center",
+    "date": "2026-02-01T01:37:59.549Z",
+    "status": "Pending Payment",
+    "amount": "NPR 1200",
+    "details": {
+      "serviceId": "apt-4",
+      "from": "Dr. Karki",
+      "to": "Dermatologist",
+      "date": "2/1/2026",
+      "specialist": "Dr. Karki",
+      "hospital": "Skin Care Center",
+      "price": "NPR 1200",
+      "cash": "true"
+    }
+  },
+  {
+    "id": "bk-1769451559521",
+    "serviceId": "apt-1",
+    "type": "APPOINTMENT",
+    "title": "Dr. Sharma",
+    "subtitle": "City Hospital",
+    "date": "2026-01-26T18:19:19.521Z",
+    "status": "Confirmed",
+    "amount": "NPR 500",
+    "details": {
+      "serviceId": "apt-1",
+      "from": "Dr. Sharma",
+      "to": "General Physician",
+      "date": "1/26/2026",
+      "specialist": "Dr. Sharma",
+      "hospital": "City Hospital",
+      "price": "NPR 500",
+      "cash": "true"
+    }
+  },
+  {
+    "id": "bk-1769450758323",
+    "serviceId": "apt-1",
+    "type": "APPOINTMENT",
+    "title": "Dr. Sharma",
+    "subtitle": "City Hospital",
+    "date": "2026-01-26T18:05:58.323Z",
+    "status": "Pending Payment",
+    "amount": "NPR 500",
+    "details": {
+      "serviceId": "apt-1",
+      "from": "Dr. Sharma",
+      "to": "General Physician",
+      "date": "1/26/2026",
+      "specialist": "Dr. Sharma",
+      "hospital": "City Hospital",
+      "price": "NPR 500",
+      "cash": "true"
+    }
+  },
+  {
+    "id": "bk-1769449900083",
+    "serviceId": "apt-1",
+    "type": "APPOINTMENT",
+    "title": "Dr. Sharma",
+    "subtitle": "City Hospital",
+    "date": "2026-01-26T17:51:40.083Z",
+    "status": "Pending Payment",
+    "amount": "NPR 500",
+    "details": {
+      "serviceId": "apt-1",
+      "from": "Dr. Sharma",
+      "to": "General Physician",
+      "date": "1/26/2026",
+      "specialist": "Dr. Sharma",
+      "hospital": "City Hospital",
+      "price": "NPR 500",
+      "cash": "true"
+    }
+  },
+  {
+    "id": "bk-1769449747615",
+    "serviceId": "apt-1",
+    "type": "APPOINTMENT",
+    "title": "Dr. Sharma",
+    "subtitle": "City Hospital",
+    "date": "2026-01-26T17:49:07.615Z",
+    "status": "Confirmed",
+    "amount": "NPR 500",
+    "details": {
+      "serviceId": "apt-1",
+      "from": "Dr. Sharma",
+      "to": "General Physician",
+      "date": "1/26/2026",
+      "specialist": "Dr. Sharma",
+      "hospital": "City Hospital",
+      "price": "NPR 500",
+      "cash": "true"
+    }
+  },
+  {
+    "id": "bk-1769449628546",
+    "serviceId": "apt-2",
+    "type": "APPOINTMENT",
+    "title": "Dr. Thapa",
+    "subtitle": "Heart Care Center",
+    "date": "2026-01-26T17:47:08.546Z",
+    "status": "Confirmed",
+    "amount": "NPR 1500",
+    "details": {
+      "serviceId": "apt-2",
+      "from": "Dr. Thapa",
+      "to": "Cardiologist",
+      "date": "1/26/2026",
+      "specialist": "Dr. Thapa",
+      "hospital": "Heart Care Center",
+      "price": "NPR 1500",
+      "verificationPending": "false",
+      "bookingRefId": "bk-1769448760117"
+    }
+  },
+  {
+    "id": "bk-1769449158464",
+    "serviceId": "apt-2",
+    "type": "APPOINTMENT",
+    "title": "Dr. Thapa",
+    "subtitle": "Heart Care Center",
+    "date": "2026-01-26T17:39:18.464Z",
+    "status": "Confirmed",
+    "amount": "NPR 1500",
+    "details": {
+      "serviceId": "apt-2",
+      "from": "Dr. Thapa",
+      "to": "Cardiologist",
+      "date": "1/26/2026",
+      "specialist": "Dr. Thapa",
+      "hospital": "Heart Care Center",
+      "price": "NPR 1500",
+      "verificationPending": "false",
+      "bookingRefId": "bk-1769448760117"
+    }
+  },
+  {
+    "id": "bk-1769448760117",
+    "serviceId": "apt-2",
+    "type": "APPOINTMENT",
+    "title": "Dr. Thapa",
+    "subtitle": "Heart Care Center",
+    "date": "2026-01-26T17:32:40.117Z",
+    "status": "Confirmed",
+    "amount": "NPR 1500",
+    "details": {
+      "serviceId": "apt-2",
+      "from": "Dr. Thapa",
+      "to": "Cardiologist",
+      "date": "1/26/2026",
+      "specialist": "Dr. Thapa",
+      "hospital": "Heart Care Center",
+      "price": "NPR 1500",
+      "verificationPending": "true"
+    }
+  },
+  {
+    "id": "bk-1769448643972",
+    "serviceId": "apt-1",
+    "type": "APPOINTMENT",
+    "title": "Dr. Sharma",
+    "subtitle": "City Hospital",
+    "date": "2026-01-26T17:30:43.972Z",
+    "status": "Pending Payment",
+    "amount": "NPR 500",
+    "details": {
+      "serviceId": "apt-1",
+      "from": "Dr. Sharma",
+      "to": "General Physician",
+      "date": "1/26/2026",
+      "specialist": "Dr. Sharma",
+      "hospital": "City Hospital",
+      "price": "NPR 500",
+      "cash": "true"
+    }
+  },
+  {
+    "id": "bk-1769448593261",
+    "serviceId": "apt-1",
+    "type": "APPOINTMENT",
+    "title": "Dr. Sharma",
+    "subtitle": "City Hospital",
+    "date": "2026-01-26T17:29:53.261Z",
+    "status": "Pending Payment",
+    "amount": "NPR 500",
+    "details": {
+      "serviceId": "apt-1",
+      "from": "Dr. Sharma",
+      "to": "General Physician",
+      "date": "1/26/2026",
+      "specialist": "Dr. Sharma",
+      "hospital": "City Hospital",
+      "price": "NPR 500",
+      "cash": "true"
+    }
+  },
+  {
+    "id": "test-pay-counter-20260126230846",
+    "type": "APPOINTMENT",
+    "subtitle": "Test Hospital",
+    "details": {
+      "specialist": "Dr. Test Doctor",
+      "price": "NPR 500",
+      "cash": "true",
+      "hospital": "Test Hospital"
+    },
+    "date": "2026-01-26T23:08:46.5551785+05:45",
+    "status": "Pending Payment",
+    "title": "Dr. Test Doctor",
+    "serviceId": "test-svc",
+    "amount": "NPR 500"
+  },
+  {
+    "id": "test-123",
+    "title": "Test Booking",
+    "subtitle": "Test Subtitle",
+    "type": "test",
+    "date": "2024-01-01",
+    "status": "Confirmed",
+    "amount": "100",
+    "details": {}
+  },
+  {
+    "id": "bk-1769367733680",
+    "type": "APPOINTMENT",
+    "title": "Service Booking",
+    "subtitle": "APPOINTMENT",
+    "date": "2026-01-25T19:02:13.680Z",
+    "status": "Confirmed",
+    "amount": "NPR 400",
+    "details": {
+      "price": "NPR 400"
+    }
+  },
+  {
+    "id": "bk-1769366669966",
+    "type": "APPOINTMENT",
+    "title": "Service Booking",
+    "subtitle": "APPOINTMENT",
+    "date": "2026-01-25T18:44:29.966Z",
+    "status": "Confirmed",
+    "amount": "NPR 400",
+    "details": {
+      "price": "NPR 400"
+    }
+  },
+  {
+    "id": "bk-1769365602190",
+    "type": "APPOINTMENT",
+    "title": "Service Booking",
+    "subtitle": "APPOINTMENT",
+    "date": "2026-01-25T18:26:42.190Z",
+    "status": "Confirmed",
+    "amount": "Paid",
+    "details": {}
+  },
+  {
+    "id": "bk-1769365591200",
+    "type": "APPOINTMENT",
+    "title": "Service Booking",
+    "subtitle": "APPOINTMENT",
+    "date": "2026-01-25T18:26:31.200Z",
+    "status": "Confirmed",
+    "amount": "Pay at Counter",
+    "details": {
+      "price": "Pay at Counter"
+    }
+  },
+  {
+    "id": "bk-1769365309002",
+    "serviceId": "bus-1",
+    "type": "BUS_BOOKING",
+    "title": "Deluxe Express",
+    "subtitle": "Deluxe Express",
+    "date": "2026-01-25T18:21:49.006Z",
+    "status": "Confirmed",
+    "amount": "NPR 1200",
+    "details": {
+      "serviceId": "bus-1",
+      "from": "Deluxe Express",
+      "to": "Kathmandu → Pokhara",
+      "date": "1/25/2026",
+      "specialist": "Deluxe Express",
+      "time": "6:00 AM",
+      "price": "NPR 1200"
+    }
+  }
+]

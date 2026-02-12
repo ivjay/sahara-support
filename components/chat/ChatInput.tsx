@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, KeyboardEvent } from "react";
+import { useState, useRef, useEffect, KeyboardEvent } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ArrowUp, Loader2 } from "lucide-react";
@@ -20,6 +20,16 @@ export function ChatInput({
     const [value, setValue] = useState("");
     const [isSending, setIsSending] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    // Auto-focus when enabled
+    useEffect(() => {
+        if (!disabled && !isSending && textareaRef.current) {
+            // Small delay to ensure UI is ready
+            setTimeout(() => {
+                textareaRef.current?.focus();
+            }, 10);
+        }
+    }, [disabled, isSending]);
 
     const handleSend = () => {
         const trimmedValue = value.trim();

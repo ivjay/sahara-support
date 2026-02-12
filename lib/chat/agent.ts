@@ -5,133 +5,12 @@ import {
     Message,
 } from "./types";
 import {
-    MOCK_BUS_OPTIONS,
-    MOCK_FLIGHT_OPTIONS,
-    MOCK_APPOINTMENT_OPTIONS,
-    MOCK_MOVIE_OPTIONS,
     WELCOME_MESSAGE,
 } from "./mock-data";
 import { delay, generateId } from "./utils";
 import { getAgentResponse } from "@/app/actions/chat";
+import { getOptionsByType } from "@/lib/chat/option-helper";
 
-// Helper to get options based on the AI's decision
-function getOptionsByType(type: string, filterCategory?: string | null, allServices: BookingOption[] = []): BookingOption[] {
-    // 1. Merge Default Mocks with Dynamic Services
-    // We want to ensure specific mocks are ALWAYS available, even if Admin adds new ones.
-    // We use a Map to Deduplicate by ID in case 'allServices' already contains the mocks (from context initialization).
-    const optionsMap = new Map<string, BookingOption>();
-
-    // Add Static Mocks first
-    [
-        ...MOCK_BUS_OPTIONS,
-        ...MOCK_FLIGHT_OPTIONS,
-        ...MOCK_APPOINTMENT_OPTIONS,
-        ...MOCK_MOVIE_OPTIONS
-    ].forEach(opt => optionsMap.set(opt.id, opt));
-
-    // Add/Overwrite with Dynamic Services
-    // This allows Admin to override a mock if they use the same ID (unlikely but good for flexibility)
-    // or simply append new ones.
-    allServices.forEach(opt => optionsMap.set(opt.id, opt));
-
-    let validOptions = Array.from(optionsMap.values());
-
-    // 2. Filter by Intent/Type
-    // We map the broad intent (e.g., APPOINTMENT) to specific service types (e.g., appointment, doctor)
-    if (type === "BUS_BOOKING") {
-        validOptions = validOptions.filter(o => o.type === 'bus');
-    } else if (type === "FLIGHT_BOOKING") {
-        validOptions = validOptions.filter(o => o.type === 'flight');
-    } else if (type === "MOVIE_BOOKING") {
-        validOptions = validOptions.filter(o => o.type === 'movie');
-    } else if (type === "APPOINTMENT") {
-        // Allow 'appointment' OR 'doctor' for flexibility
-        validOptions = validOptions.filter(o => o.type === 'appointment' || o.category === 'doctor');
-    }
-
-    // 3. Smart Matching with Synonyms and Specialty Recognition
-    if (filterCategory) {
-        // Specialty synonym map for better matching
-        const specialtyMap: Record<string, string[]> = {
-            'cardiologist': ['heart', 'cardiac', 'cardio', 'heart doctor', 'heart specialist'],
-            'dentist': ['teeth', 'dental', 'tooth', 'oral', 'dental care'],
-            'dermatologist': ['skin', 'skin doctor', 'derma', 'skin specialist'],
-            'gynecologist': ['women', 'pregnancy', 'gyno', 'maternity', 'obs'],
-            'urologist': ['kidney', 'bladder', 'urology', 'urinary'],
-            'nephrologist': ['kidney', 'kidney specialist', 'nephro', 'renal'],
-            'general': ['gp', 'physician', 'general doctor', 'family doctor'],
-            'plumber': ['pipe', 'leak', 'water', 'plumbing', 'drainage'],
-            'electrician': ['electricity', 'wiring', 'electric', 'power', 'light'],
-            'salon': ['hair', 'haircut', 'beauty', 'grooming', 'barber'],
-            'makeup': ['makeup artist', 'bridal', 'party makeup', 'mua'],
-            'tailor': ['sewing', 'stitching', 'alteration', 'suit', 'clothes'],
-        };
-
-        // Normalize query and split into tokens
-        const query = filterCategory.toLowerCase();
-        const queryTokens = query.split(/\s+/).filter(t => t.length > 2);
-
-        if (queryTokens.length > 0) {
-            const scoredOptions = validOptions.map(opt => {
-                let score = 0;
-
-                const titleLower = opt.title.toLowerCase();
-                const subtitleLower = opt.subtitle.toLowerCase();
-                const categoryLower = opt.category?.toLowerCase() || '';
-                const detailsText = Object.values(opt.details).join(' ').toLowerCase();
-
-                // Check for exact specialty match in subtitle (HIGHEST PRIORITY)
-                Object.entries(specialtyMap).forEach(([specialty, synonyms]) => {
-                    if (subtitleLower.includes(specialty)) {
-                        // User query matches this specialty
-                        if (queryTokens.some(token =>
-                            specialty.includes(token) ||
-                            synonyms.some(syn => syn.includes(token) || token.includes(syn))
-                        )) {
-                            score += 500; // Massive boost for specialty match
-                        }
-                    }
-                });
-
-                queryTokens.forEach(token => {
-                    // Exact subtitle match (e.g., "Cardiologist")
-                    if (subtitleLower === token) score += 200;
-                    if (subtitleLower.includes(token)) score += 100;
-
-                    // Category match
-                    if (categoryLower === token) score += 80;
-                    if (categoryLower.includes(token)) score += 40;
-
-                    // Title match (doctor name)
-                    if (titleLower.includes(token)) score += 30;
-
-                    // Detail matches (lower priority)
-                    if (detailsText.includes(token)) score += 10;
-
-                    // Check synonyms
-                    Object.entries(specialtyMap).forEach(([specialty, synonyms]) => {
-                        if (synonyms.some(syn => token.includes(syn) || syn.includes(token))) {
-                            if (subtitleLower.includes(specialty) || categoryLower.includes(specialty)) {
-                                score += 150; // Synonym match
-                            }
-                        }
-                    });
-                });
-
-                return { opt, score };
-            });
-
-            // Filter out zero-score results and sort by relevance
-            validOptions = scoredOptions
-                .filter(item => item.score > 0)
-                .sort((a, b) => b.score - a.score)
-                .map(item => item.opt);
-        }
-    }
-
-    // 4. Limit to top 5 most relevant results
-    return validOptions.slice(0, 5);
-}
 
 export interface AgentResponse {
     content: string;
@@ -146,6 +25,7 @@ const QR_OPTION: BookingOption = {
     title: "Scan to Pay",
     subtitle: "E-Sewa / Khalti / ConnectIPS",
     price: 0,
+    currency: "NPR",
     details: { qr: "true" },
     available: true
 };
@@ -156,6 +36,7 @@ const CASH_OPTION: BookingOption = {
     title: "Pay at Counter",
     subtitle: "Reserve now, pay later",
     price: 0,
+    currency: "NPR",
     details: { cash: "true" },
     available: true
 };
@@ -197,16 +78,21 @@ export async function processMessage(
     let showOptions = aiResponse.showOptions;
     let filterCategory = aiResponse.filterCategory;
 
-    // Handle new v2.0 format: map booking_type + stage to showOptions
-    if (!showOptions && aiResponse.booking_type && aiResponse.stage === 'confirming') {
-        const typeMap: Record<string, "BUS_BOOKING" | "FLIGHT_BOOKING" | "APPOINTMENT" | "MOVIE_BOOKING"> = {
-            'bus': 'BUS_BOOKING',
-            'flight': 'FLIGHT_BOOKING',
-            'doctor': 'APPOINTMENT',
-            'salon': 'APPOINTMENT',
-            'movie': 'MOVIE_BOOKING'
-        };
-        showOptions = typeMap[aiResponse.booking_type] || null;
+    // ✅ FIX: Show options during BOTH gathering AND confirming stages
+    if (!showOptions && aiResponse.booking_type) {
+        // Show options when gathering info OR confirming
+        if (aiResponse.stage === 'gathering' || aiResponse.stage === 'confirming') {
+            const typeMap: Record<string, "BUS_BOOKING" | "FLIGHT_BOOKING" | "APPOINTMENT" | "MOVIE_BOOKING"> = {
+                'bus': 'BUS_BOOKING',
+                'flight': 'FLIGHT_BOOKING',
+                'doctor': 'APPOINTMENT',
+                'salon': 'APPOINTMENT',
+                'movie': 'MOVIE_BOOKING'
+            };
+            showOptions = typeMap[aiResponse.booking_type] || null;
+            
+            console.log(`[Agent] Mapped ${aiResponse.booking_type} + ${aiResponse.stage} → ${showOptions}`);
+        }
     }
 
     // Smart extraction: If AI didn't provide filterCategory but mentioned a specialty
