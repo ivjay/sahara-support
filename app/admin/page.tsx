@@ -28,6 +28,7 @@ import { DoctorForm } from "@/components/admin/DoctorForm";
 import { TransportForm } from "@/components/admin/TransportForm";
 import { MovieForm } from "@/components/admin/MovieForm";
 import { cn } from "@/lib/utils";
+import { LogoCompact } from "@/components/ui/logo";
 
 export default function AdminPage() {
     const { services, addService, deleteService, isLoading } = useServices();
@@ -120,20 +121,25 @@ export default function AdminPage() {
     };
 
     return (
-        <div className="min-h-screen bg-muted/10 font-sans pb-20">
+        <div className="min-h-screen h-screen flex flex-col bg-muted/10 font-sans overflow-hidden">
             {/* Top Navigation */}
-            <header className="bg-background/80 backdrop-blur-md sticky top-0 z-20 border-b border-border/50">
+            <header className="bg-background/95 backdrop-blur-md sticky top-0 z-20 border-b border-border/50 shrink-0 shadow-sm">
                 <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
                         <Link href="/chat">
-                            <Button variant="ghost" size="icon" className="rounded-full">
+                            <Button variant="ghost" size="icon" className="rounded-lg hover:bg-muted">
                                 <ArrowLeft className="h-5 w-5" />
                             </Button>
                         </Link>
-                        <div>
-                            <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                                Sahara Admin
-                            </h1>
+                        <div className="flex items-center gap-3">
+                            <LogoCompact className="opacity-90" />
+                            <div className="h-6 w-px bg-border/50" />
+                            <div>
+                                <h1 className="text-lg font-bold bg-gradient-to-r from-primary via-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                                    Admin Panel
+                                </h1>
+                                <p className="text-[10px] text-muted-foreground">Manage Services & Bookings</p>
+                            </div>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -157,7 +163,8 @@ export default function AdminPage() {
                 </div>
             </header>
 
-            <main className="max-w-7xl mx-auto p-6">
+            <main className="flex-1 overflow-y-auto">
+                <div className="max-w-7xl mx-auto p-6">
 
                 {/* Stats / Overview (Simple) */}
                 {!isAddMode && (
@@ -380,6 +387,7 @@ export default function AdminPage() {
                         </Tabs>
                     </div>
                 )}
+                </div>
             </main>
         </div>
     );

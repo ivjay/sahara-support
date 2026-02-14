@@ -7,9 +7,14 @@ export async function GET(request: NextRequest) {
     const venueId = searchParams.get('venueId');
     const serviceId = searchParams.get('serviceId');
     const eventDate = searchParams.get('eventDate');
-    const eventTime = searchParams.get('eventTime');
+    let eventTime = searchParams.get('eventTime');
 
-    if (!venueId || !serviceId || !eventDate || !eventTime) {
+    // Handle null/undefined event time (for services like bus that don't have specific times)
+    if (eventTime === 'null' || eventTime === 'undefined' || !eventTime) {
+        eventTime = 'all-day'; // Use a default value
+    }
+
+    if (!venueId || !serviceId || !eventDate) {
         return NextResponse.json(
             { error: 'Missing required parameters' },
             { status: 400 }
@@ -80,9 +85,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { venueId, serviceId, eventDate, eventTime, seatLabels, sessionId } = body;
+        let { venueId, serviceId, eventDate, eventTime, seatLabels, sessionId } = body;
 
-        if (!venueId || !serviceId || !eventDate || !eventTime || !seatLabels || !sessionId) {
+        // Handle null/undefined event time
+        if (eventTime === 'null' || eventTime === 'undefined' || !eventTime) {
+            eventTime = 'all-day';
+        }
+
+        if (!venueId || !serviceId || !eventDate || !seatLabels || !sessionId) {
             return NextResponse.json(
                 { error: 'Missing required fields' },
                 { status: 400 }

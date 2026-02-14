@@ -85,17 +85,17 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 isUser ? "flex-row-reverse animate-slide-in-right" : "flex-row animate-slide-in-left"
             )}
         >
-            {/* Avatar with pulse on assistant */}
+            {/* Vibrant Avatar */}
             <Avatar className={cn(
-                "h-8 w-8 flex items-center justify-center shrink-0 transition-transform hover:scale-110",
+                "h-10 w-10 flex items-center justify-center shrink-0 transition-all hover:scale-110 shadow-lg",
                 isUser
-                    ? "bg-primary"
-                    : "bg-muted border border-border"
+                    ? "bg-gradient-to-br from-primary via-chart-2 to-chart-3 shadow-primary/30 neon-glow"
+                    : "bg-gradient-to-br from-muted to-muted/50 border-2 border-primary/20"
             )}>
                 {isUser ? (
-                    <User className="h-4 w-4 text-primary-foreground" />
+                    <User className="h-5 w-5 text-white" strokeWidth={2.5} />
                 ) : (
-                    <HeartHandshake className="h-4 w-4 text-primary" strokeWidth={1.5} />
+                    <HeartHandshake className="h-5 w-5 text-primary" strokeWidth={2} />
                 )}
             </Avatar>
 
@@ -103,10 +103,10 @@ export function ChatMessage({ message }: ChatMessageProps) {
             <div className={cn("flex flex-col max-w-[85%] lg:max-w-[75%]", isUser && "items-end")}>
                 <div
                     className={cn(
-                        "px-4 py-3 rounded-2xl text-[14px] leading-relaxed transition-all hover-lift",
+                        "px-5 py-3.5 rounded-2xl text-[15px] leading-relaxed transition-all shadow-md hover:shadow-xl",
                         isUser
-                            ? "bg-primary text-primary-foreground rounded-br-md"
-                            : "bg-muted rounded-bl-md"
+                            ? "bg-gradient-to-br from-primary via-chart-2 to-chart-3 text-white rounded-br-md shadow-primary/30"
+                            : "bg-gradient-to-br from-card to-muted/50 border border-border/50 rounded-bl-md backdrop-blur-sm"
                     )}
                 >
                     <div className="whitespace-pre-wrap">

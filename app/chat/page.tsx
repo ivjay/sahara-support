@@ -7,8 +7,9 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { Sidebar } from "@/components/chat/Sidebar";
 import { BookingOption } from "@/lib/chat/types";
 import { Button } from "@/components/ui/button";
-import { Menu, HeartHandshake } from "lucide-react";
+import { Menu, User, X } from "lucide-react";
 import Link from "next/link";
+import { LogoCompact, LogoIcon } from "@/components/ui/logo";
 import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
 import { useBookings, BookingRecord } from "@/lib/services/booking-context";
 import { sendMessage as newSendMessage } from "@/app/actions/chat";
@@ -260,25 +261,22 @@ export default function ChatPage() {
             </div>
 
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                <header className="lg:hidden h-14 bg-background border-b border-border flex items-center px-4 shrink-0">
+                <header className="lg:hidden h-16 bg-background/95 backdrop-blur-sm border-b border-border/50 flex items-center px-4 shrink-0">
                     <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => setSidebarOpen(true)}
-                        className="h-9 w-9 -ml-2"
+                        className="h-10 w-10 -ml-2 rounded-lg hover:bg-muted transition-colors"
                     >
                         <Menu className="h-5 w-5" />
                     </Button>
-                    <div className="flex items-center gap-2 ml-2">
-                        <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-                            <HeartHandshake className="w-4 h-4 text-primary-foreground" strokeWidth={1.5} />
-                        </div>
-                        <span className="font-semibold text-sm">Sahara</span>
+                    <div className="ml-2">
+                        <LogoCompact />
                     </div>
                     <div className="ml-auto">
                         <Link href="/profile">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-xs font-bold text-primary-foreground shadow-sm">
-                                BA
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center text-sm font-bold text-white shadow-md hover:shadow-lg transition-shadow">
+                                {state.userProfile?.avatarInitials || <User className="h-5 w-5" />}
                             </div>
                         </Link>
                     </div>
@@ -338,8 +336,20 @@ export default function ChatPage() {
 
             {/* Booking Wizard Modal */}
             {wizardState?.mode === 'wizard' && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-                    <div className="w-full max-w-4xl my-auto">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-fade-in">
+                    <div className="w-full max-w-4xl my-auto relative animate-pop-in">
+                        {/* Close Button */}
+                        <button
+                            onClick={() => {
+                                if (confirm('Are you sure you want to cancel this booking?')) {
+                                    setWizardState(null);
+                                }
+                            }}
+                            className="absolute -top-4 -right-4 z-10 w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-2xl hover:shadow-red-500/50 transition-all hover:scale-110 flex items-center justify-center group"
+                        >
+                            <X className="h-6 w-6 group-hover:rotate-90 transition-transform" />
+                        </button>
+
                         <BookingWizard
                             serviceType={wizardState.serviceType}
                             selectedService={wizardState.service}

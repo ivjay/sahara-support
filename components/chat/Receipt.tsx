@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Download, Share2, CheckCircle2, HeartHandshake } from "lucide-react";
+import { Download, Share2, CheckCircle2, HeartHandshake, Clock, CreditCard, Wallet, Smartphone } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
@@ -111,8 +111,18 @@ export function Receipt({ data }: ReceiptProps) {
                     {data.paymentMethod && (
                         <div className="flex justify-between border-b border-dashed pb-3">
                             <span className="text-muted-foreground">Payment</span>
-                            <span className="font-medium text-right">
-                                {data.paymentMethod === 'qr' ? '💳 Online (QR)' : '💵 Cash on Visit'}
+                            <span className="font-medium text-right flex items-center gap-1.5">
+                                {data.paymentMethod === 'qr' ? (
+                                    <>
+                                        <CreditCard className="h-3.5 w-3.5 text-primary" />
+                                        Online (QR)
+                                    </>
+                                ) : (
+                                    <>
+                                        <Wallet className="h-3.5 w-3.5 text-primary" />
+                                        Cash on Visit
+                                    </>
+                                )}
                             </span>
                         </div>
                     )}
@@ -132,22 +142,28 @@ export function Receipt({ data }: ReceiptProps) {
 
                 {/* QR Code for Online Payments */}
                 {data.status === 'Under Review' && data.paymentMethod === 'qr' && (
-                    <div className="mt-6 p-4 bg-primary/5 rounded-lg border-2 border-dashed border-primary/30">
-                        <p className="text-sm font-semibold text-center mb-3">Complete Payment</p>
-                        <div className="w-48 h-48 mx-auto bg-white flex items-center justify-center rounded border-2">
+                    <div className="mt-6 p-5 bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border-2 border-dashed border-primary/30 shadow-sm">
+                        <div className="flex items-center justify-center gap-2 mb-4">
+                            <Smartphone className="h-5 w-5 text-primary" />
+                            <p className="text-sm font-semibold">Complete Payment</p>
+                        </div>
+                        <div className="w-48 h-48 mx-auto bg-white dark:bg-gray-950 flex items-center justify-center rounded-lg border-2 border-primary/20 shadow-md">
                             {data.qrCodeUrl ? (
-                                <img src={data.qrCodeUrl} alt="QR Code" className="w-full h-full" />
+                                <img src={data.qrCodeUrl} alt="QR Code" className="w-full h-full rounded-lg" />
                             ) : (
                                 <div className="text-center p-4">
-                                    <div className="text-4xl mb-2">📱</div>
-                                    <p className="text-xs text-gray-600">Scan with eSewa/Khalti</p>
-                                    <p className="text-xs text-gray-500 mt-1">Amount: {data.price}</p>
+                                    <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary/10 flex items-center justify-center">
+                                        <Smartphone className="w-6 h-6 text-primary" />
+                                    </div>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">Scan with eSewa/Khalti</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">Amount: {data.price}</p>
                                 </div>
                             )}
                         </div>
-                        <p className="text-xs text-center mt-3 text-muted-foreground">
-                            ⏳ Awaiting payment verification from admin
-                        </p>
+                        <div className="flex items-center justify-center gap-2 mt-4 text-xs text-muted-foreground bg-amber-50 dark:bg-amber-950/20 px-3 py-2 rounded-lg border border-amber-200 dark:border-amber-800/30">
+                            <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-500 animate-pulse" />
+                            <span>Awaiting payment verification from admin</span>
+                        </div>
                     </div>
                 )}
             </CardContent>

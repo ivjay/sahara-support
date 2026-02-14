@@ -35,18 +35,23 @@ export default function PaymentSuccessPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-            <Card className="max-w-2xl w-full p-8 space-y-6">
+        <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-blue-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center p-4 relative overflow-hidden">
+            {/* Decorative background elements */}
+            <div className="absolute inset-0 bg-pattern-geo opacity-50" />
+            <div className="absolute top-10 left-10 w-64 h-64 bg-green-400/20 dark:bg-green-600/10 rounded-full blur-3xl" />
+            <div className="absolute bottom-10 right-10 w-80 h-80 bg-blue-400/15 dark:bg-blue-600/10 rounded-full blur-3xl" />
+
+            <Card className="max-w-2xl w-full p-8 space-y-6 shadow-2xl relative z-10 border-2 border-green-100 dark:border-green-900/30">
                 {/* Success Icon */}
                 <div className="text-center">
-                    <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
-                        <CheckCircle className="w-12 h-12 text-green-600" />
+                    <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 rounded-full mb-4 shadow-lg shadow-green-500/20 animate-pop-in">
+                        <CheckCircle className="w-14 h-14 text-green-600 dark:text-green-500" strokeWidth={2} />
                     </div>
-                    <h1 className="text-3xl font-bold text-green-600 mb-2">
-                        Payment Successful! 🎉
+                    <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-500 dark:to-emerald-500 bg-clip-text text-transparent mb-2">
+                        Payment Successful
                     </h1>
-                    <p className="text-gray-600">
-                        Your booking has been confirmed
+                    <p className="text-muted-foreground">
+                        Your booking has been confirmed and payment processed
                     </p>
                 </div>
 
@@ -101,21 +106,37 @@ export default function PaymentSuccessPage() {
                     )}
 
                     <div className="flex justify-between pt-2">
-                        <span className="text-gray-600">Status:</span>
-                        <span className="font-semibold text-green-600">✓ Confirmed</span>
+                        <span className="text-gray-600 dark:text-gray-400">Status:</span>
+                        <div className="flex items-center gap-2">
+                            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-500" />
+                            <span className="font-semibold text-green-600 dark:text-green-500">Confirmed</span>
+                        </div>
                     </div>
                 </div>
 
                 {/* Next Steps */}
-                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                    <h3 className="font-semibold mb-2 text-blue-900 dark:text-blue-100">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-200 dark:border-blue-800/50 rounded-xl p-5 shadow-sm">
+                    <h3 className="font-semibold mb-3 text-blue-900 dark:text-blue-100 flex items-center gap-2">
+                        <ArrowRight className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                         What's Next?
                     </h3>
-                    <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                        <li>✓ A confirmation has been sent to your phone/email</li>
-                        <li>✓ Save your Booking ID for reference</li>
-                        <li>✓ Please arrive 15-30 minutes early</li>
-                        <li>✓ Bring a valid ID for verification</li>
+                    <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
+                        <li className="flex items-start gap-2">
+                            <CheckCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                            <span>A confirmation has been sent to your phone/email</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <CheckCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                            <span>Save your Booking ID for reference</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <CheckCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                            <span>Please arrive 15-30 minutes early</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <CheckCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                            <span>Bring a valid ID for verification</span>
+                        </li>
                     </ul>
                 </div>
 
