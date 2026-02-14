@@ -1,4 +1,4 @@
-import { BookingType } from "@/lib/supabase";
+// Email service for booking confirmations
 
 /**
  * MOCK Email Service

@@ -235,8 +235,9 @@ export async function getAgentResponse(
             language: parsed.language,
             booking_type: parsed.booking_type,
             collected_details: parsed.collected_details || {},
-            showOptions: null as import("@/lib/chat/types").Intent | null,
-            filterCategory: null as string | null,
+            showOptions: parsed.show_options ?? null as import("@/lib/chat/types").Intent | null,
+            optionType: parsed.option_type ?? null,
+            filterCategory: parsed.filter_category ?? null as string | null,
             quickReplies: [] as string[]
         };
 
@@ -250,6 +251,7 @@ export async function getAgentResponse(
             booking_type: null,
             collected_details: {},
             showOptions: null as import("@/lib/chat/types").Intent | null,
+            optionType: null,
             filterCategory: null as string | null,
             quickReplies: [] as string[]
         };

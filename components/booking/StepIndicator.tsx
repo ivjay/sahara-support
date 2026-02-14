@@ -17,7 +17,7 @@ export function StepIndicator({ steps, currentStep }: StepIndicatorProps) {
             <div className="flex items-center justify-between">
                 {steps.map((step, index) => {
                     const isComplete = index < currentIndex;
-                    const isCurrent = index === currentStep;
+                    const isCurrent = index === currentIndex;
 
                     return (
                         <div key={step.id} className="flex items-center flex-1">

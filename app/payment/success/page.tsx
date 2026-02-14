@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, ArrowRight, Download } from "lucide-react";
 import Link from "next/link";
 
-export default function PaymentSuccessPage() {
+function PaymentSuccessContent() {
     const searchParams = useSearchParams();
     const bookingId = searchParams.get('bookingId');
     const transactionId = searchParams.get('transactionId');
@@ -172,5 +172,13 @@ export default function PaymentSuccessPage() {
                 </p>
             </Card>
         </div>
+    );
+}
+
+export default function PaymentSuccessPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <PaymentSuccessContent />
+        </Suspense>
     );
 }

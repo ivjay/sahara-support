@@ -7,7 +7,12 @@
       "Bash(tasklist *)",
       "Bash(findstr *)",
       "Bash(curl *)",
-      "WebFetch(domain:lacuna-eta.vercel.app)"
+      "WebFetch(domain:lacuna-eta.vercel.app)",
+      "Bash(npx shadcn@latest add:*)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ],
+  "enableAllProjectMcpServers": true
 }

@@ -1,5 +1,31 @@
 [
   {
+    "id": "BK-MLM5DE94",
+    "serviceId": "apt-psy-2",
+    "type": "appointment",
+    "title": "Dr. Binod Maharjan",
+    "subtitle": "Psychologist - Cognitive Therapy",
+    "status": "Pending Payment",
+    "amount": "NPR 1200",
+    "date": "2026-02-13T00:00:00.000Z",
+    "details": {
+      "serviceId": "apt-psy-2",
+      "serviceType": "appointment",
+      "date": "2026-02-13",
+      "time": "14:00",
+      "passengerCount": 1,
+      "passengers": [
+        {
+          "phone": "+977 1234567890"
+        }
+      ],
+      "seats": [],
+      "totalPrice": 1200,
+      "currency": "NPR",
+      "paymentMethod": "khalti"
+    }
+  },
+  {
     "id": "BK-MLM40QJV",
     "serviceId": "bus-2",
     "type": "bus",
@@ -65,7 +91,7 @@
     "type": "movie",
     "title": "Mahajatra",
     "subtitle": "QFX Civil Mall",
-    "status": "Pending Payment",
+    "status": "Confirmed",
     "amount": "NPR 800",
     "date": "2026-02-19T00:00:00.000Z",
     "details": {
@@ -97,7 +123,7 @@
     "type": "movie",
     "title": "Mahajatra",
     "subtitle": "QFX Civil Mall",
-    "status": "Pending Payment",
+    "status": "Cancelled",
     "amount": "NPR 800",
     "date": "2026-02-19T00:00:00.000Z",
     "details": {
@@ -155,7 +181,7 @@
     "type": "appointment",
     "title": "Dr. Ramesh Khadka",
     "subtitle": "Pediatrician - Child Health Expert",
-    "status": "Pending Payment",
+    "status": "Cancelled",
     "amount": "NPR 700",
     "date": "2026-02-14T00:00:00.000Z",
     "details": {
@@ -209,7 +235,7 @@
     "type": "movie",
     "title": "Shaitaan",
     "subtitle": "FCube Cinemas, Chabahil",
-    "status": "Pending Payment",
+    "status": "Confirmed",
     "amount": "NPR 350",
     "date": "2026-02-14T00:00:00.000Z",
     "details": {

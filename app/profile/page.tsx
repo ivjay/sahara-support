@@ -280,7 +280,7 @@ export default function ProfilePage() {
 
 // Bookings Section Component
 function BookingsSection() {
-    const { bookings, clearHistory } = useBookings();
+    const { bookings } = useBookings();
 
     if (bookings.length === 0) return null;
 
@@ -312,14 +312,6 @@ function BookingsSection() {
                         </div>
                     </div>
                 ))}
-
-                {bookings.length > 0 && (
-                    <div className="pt-2 flex justify-end">
-                        <Button variant="ghost" size="sm" onClick={clearHistory} className="text-xs text-destructive hover:bg-destructive/10">
-                            Clear History
-                        </Button>
-                    </div>
-                )}
             </div>
         </SectionCard>
     );

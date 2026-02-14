@@ -10,6 +10,7 @@ import {
 import { delay, generateId } from "./utils";
 import { getAgentResponse } from "@/app/actions/chat";
 import { getOptionsByType } from "@/lib/chat/option-helper";
+import { translateToNepali, isNepaliText } from "@/lib/services/translation-service";
 
 
 export interface AgentResponse {
@@ -90,10 +91,23 @@ export async function processMessage(
     const aiResponse = await getAgentResponse(userMessage, history);
     console.log("[Agent] 🤖 LLM Response:", aiResponse);
 
+    // ✅ TRANSLATE if Nepali detected
+    let finalContent = aiResponse.content;
+    if (aiResponse.language === 'ne' || isNepaliText(userMessage)) {
+        console.log("[Agent] 🌏 Nepali detected - translating response...");
+        try {
+            finalContent = await translateToNepali(aiResponse.content);
+            console.log("[Agent] ✓ Translated:", finalContent);
+        } catch (error) {
+            console.error("[Agent] ✗ Translation failed, using English:", error);
+            // Keep English if translation fails
+        }
+    }
+
     // ✅ TRUST THE LLM - Use its decisions directly
-    let showOptions = aiResponse.show_options;
-    let optionType = aiResponse.option_type;
-    let filterCategory = aiResponse.filter_category;
+    let showOptions = aiResponse.showOptions;
+    let optionType = aiResponse.optionType;
+    let filterCategory = aiResponse.filterCategory;
 
     // 🛡️ SAFETY NET: Force show_options if LLM forgot
     const msg = userMessage.toLowerCase();
@@ -106,7 +120,7 @@ export async function processMessage(
             console.log("[Agent] 🛡️ SAFETY NET: General service request - showing all doctors");
             showOptions = true;
             optionType = "doctor";
-            filterCategory = undefined; // Show all doctors
+            filterCategory = null; // Show all doctors
         }
         // Check for specific service keywords
         else if (msg.includes('therapy') || msg.includes('psychologist') || msg.includes('therapist') ||
@@ -172,7 +186,7 @@ export async function processMessage(
     }
 
     return {
-        content: aiResponse.content,
+        content: finalContent,
         options: finalOptions,
         quickReplies: aiResponse.quickReplies || [],
         newBookingState: currentBooking

@@ -5,8 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { XCircle, ArrowLeft, RefreshCw, CheckCircle, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import { Suspense } from "react";
 
-export default function PaymentFailedPage() {
+function PaymentFailedContent() {
     const searchParams = useSearchParams();
     const bookingId = searchParams.get('bookingId');
     const reason = searchParams.get('reason');
@@ -153,5 +154,13 @@ export default function PaymentFailedPage() {
                 </div>
             </Card>
         </div>
+    );
+}
+
+export default function PaymentFailedPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <PaymentFailedContent />
+        </Suspense>
     );
 }

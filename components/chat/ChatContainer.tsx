@@ -66,70 +66,37 @@ export function ChatContainer({ onOptionSelect, onSend }: ChatContainerProps) {
 
     return (
         <div
-            className="flex-1 overflow-y-auto scrollbar-thin scroll-smooth min-h-0 relative"
+            className="flex-1 overflow-y-auto scrollbar-thin scroll-smooth min-h-0"
             ref={scrollRef}
         >
-            {/* Vibrant Animated Background */}
-            <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
-                {/* Large gradient orbs with animation */}
-                <div className="absolute top-20 -left-20 w-[600px] h-[600px] bg-gradient-to-br from-primary/20 via-chart-2/15 to-chart-3/10 dark:from-primary/15 dark:via-chart-2/10 dark:to-chart-3/5 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
-                <div className="absolute bottom-20 -right-20 w-[700px] h-[700px] bg-gradient-to-tl from-chart-3/20 via-primary/15 to-chart-2/10 dark:from-chart-3/15 dark:via-primary/10 dark:to-chart-2/5 rounded-full blur-[120px] float-smooth" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-r from-accent/10 to-primary/10 dark:from-accent/5 dark:to-primary/5 rounded-full blur-[100px]" />
-
-                {/* Animated gradient mesh */}
-                <div
-                    className="absolute inset-0 opacity-[0.08] dark:opacity-[0.04]"
-                    style={{
-                        backgroundImage: `
-                            radial-gradient(circle at 20% 50%, oklch(0.75 0.20 260 / 0.3) 0%, transparent 50%),
-                            radial-gradient(circle at 80% 80%, oklch(0.70 0.22 280 / 0.3) 0%, transparent 50%),
-                            radial-gradient(circle at 40% 20%, oklch(0.65 0.24 300 / 0.3) 0%, transparent 50%)
-                        `,
-                    }}
-                />
-            </div>
-
-            <div className="max-w-3xl mx-auto px-4 py-8 relative">
+            <div className="max-w-3xl mx-auto px-4 py-8">
                 {/* Welcome state */}
                 {state.messages.length === 0 && (
-                    <div className="flex flex-col items-center justify-center text-center py-12 animate-fade-in-up">
-                        {/* Vibrant welcome icon */}
-                        <div className="relative mb-8">
-                            <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-chart-2/20 to-chart-3/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
-                            <div className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-primary via-chart-2 to-chart-3 flex items-center justify-center shadow-2xl shadow-primary/40 neon-glow">
-                                <MessageSquare className="w-12 h-12 text-white" strokeWidth={2} />
-                            </div>
+                    <div className="flex flex-col items-center justify-center text-center py-12">
+                        {/* Simple welcome icon */}
+                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                            <MessageSquare className="w-8 h-8 text-primary" />
                         </div>
 
-                        <h2 className="text-3xl font-bold mb-3 text-gradient-vibrant">
-                            Hey {state.userProfile?.firstName || "there"}! 👋
+                        <h2 className="text-2xl font-bold mb-2">
+                            Hi {state.userProfile?.firstName || "there"}! 👋
                         </h2>
-                        <p className="text-lg text-muted-foreground mb-2">
-                            What can I help you with today?
-                        </p>
-                        <p className="text-sm text-muted-foreground/70 mb-10 max-w-md">
-                            Book tickets, schedule appointments, or find services - I've got you covered!
+                        <p className="text-muted-foreground mb-8 max-w-md">
+                            I'm Sahara, your friendly booking assistant. How can I help you today?
                         </p>
 
-                        {/* Vibrant suggestion cards */}
-                        <div className="grid grid-cols-2 gap-4 w-full max-w-lg">
-                            {suggestions.map(({ icon: Icon, text, color }, index) => (
+                        {/* Simple suggestion cards */}
+                        <div className="grid grid-cols-2 gap-3 w-full max-w-lg">
+                            {suggestions.map(({ icon: Icon, text, color }) => (
                                 <button
                                     key={text}
                                     onClick={() => handleSuggestionClick(text)}
-                                    className="group relative flex items-center gap-3 p-5 rounded-2xl bg-gradient-to-br from-card via-card to-muted/30 border-2 border-border/30 hover:border-primary/50 shadow-lg hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 text-left card-lift overflow-hidden"
-                                    style={{ animationDelay: `${index * 100}ms` }}
+                                    className="flex items-center gap-2 p-4 rounded-lg border hover:border-primary hover:bg-primary/5 transition-all text-left"
                                 >
-                                    {/* Gradient overlay on hover */}
-                                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-chart-2/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-                                    <div className={`relative w-12 h-12 rounded-xl ${color} flex items-center justify-center group-hover:scale-110 transition-transform shadow-md backdrop-blur-sm`}>
-                                        <Icon className="h-6 w-6" strokeWidth={2.5} />
+                                    <div className={`w-10 h-10 rounded-lg ${color} flex items-center justify-center`}>
+                                        <Icon className="h-5 w-5" />
                                     </div>
-                                    <span className="relative text-base font-semibold">{text}</span>
-
-                                    {/* Shine effect */}
-                                    <div className="absolute inset-0 shimmer-vibrant opacity-0 group-hover:opacity-100" />
+                                    <span className="text-sm font-medium">{text}</span>
                                 </button>
                             ))}
                         </div>

@@ -1,43 +1,29 @@
 import { BookingWizardState, BookingAction, BookingStep, PassengerInfo } from './types';
 
-// Step sequences for each service type
+// Simplified step sequences - reduced from 8 to 3-4 steps
 export const STEP_SEQUENCES: Record<string, BookingStep[]> = {
     movie: [
-        'service_selected',
-        'date_selection',
-        'time_selection',
-        'passenger_count',
-        'seat_selection',
-        'price_review',
-        'payment',
+        'date_selection',      // Date & Time combined
+        'seat_selection',      // Seats & Passenger details combined
+        'payment',             // Review + Payment combined
         'confirmation'
     ],
     bus: [
-        'service_selected',
-        'date_selection',
-        'passenger_count',
-        'passenger_details',
-        'seat_selection',
-        'price_review',
-        'payment',
+        'date_selection',      // Date selection only (no time needed)
+        'seat_selection',      // Seats & Passenger details combined
+        'payment',             // Review + Payment combined
         'confirmation'
     ],
     flight: [
-        'service_selected',
-        'date_selection',
-        'passenger_count',
-        'passenger_details',
-        'seat_selection',
-        'price_review',
-        'payment',
+        'date_selection',      // Date selection only
+        'seat_selection',      // Seats & Passenger details combined
+        'payment',             // Review + Payment combined
         'confirmation'
     ],
     appointment: [
-        'service_selected',
-        'date_selection',
-        'time_selection',
-        'price_review',
-        'payment',
+        'date_selection',      // Date & Time combined
+        'passenger_details',   // Just patient details (no seats)
+        'payment',             // Review + Payment combined
         'confirmation'
     ]
 };
@@ -71,33 +57,40 @@ export function createInitialState(
 
 function validateStep(state: BookingWizardState): { valid: boolean; errors: Record<string, string> } {
     const errors: Record<string, string> = {};
+    const needsTime = state.serviceType === 'movie' || state.serviceType === 'appointment';
 
     switch (state.currentStep) {
         case 'date_selection':
             if (!state.selectedDate) errors.date = 'Please select a date';
-            break;
-
-        case 'time_selection':
-            if (!state.selectedTime) errors.time = 'Please select a time';
-            break;
-
-        case 'passenger_count':
-            if (state.passengerCount < 1) errors.count = 'At least 1 passenger required';
-            if (state.passengerCount > 10) errors.count = 'Maximum 10 passengers';
+            if (needsTime && !state.selectedTime) errors.time = 'Please select a time';
             break;
 
         case 'passenger_details':
+            // Validate at least first passenger has name
+            if (!state.passengers[0]?.fullName?.trim()) {
+                errors.passenger = 'Please enter passenger name';
+            }
+            break;
+
+        case 'seat_selection':
+            // Validate passenger count
+            if (state.passengerCount < 1) {
+                errors.count = 'At least 1 passenger required';
+            }
+            // Validate seats selected
+            if (state.selectedSeats.length !== state.passengerCount) {
+                errors.seats = `Select ${state.passengerCount} seat(s). Currently selected: ${state.selectedSeats.length}`;
+            }
+            // Validate passenger details
             state.passengers.forEach((p, i) => {
-                if (!p.fullName?.trim()) {
+                if (i < state.passengerCount && !p.fullName?.trim()) {
                     errors[`passenger_${i}`] = `Passenger ${i + 1} name required`;
                 }
             });
             break;
 
-        case 'seat_selection':
-            if (state.selectedSeats.length !== state.passengerCount) {
-                errors.seats = `Select ${state.passengerCount} seat(s). Currently: ${state.selectedSeats.length}`;
-            }
+        case 'payment':
+            // Payment step handles its own validation
             break;
     }
 

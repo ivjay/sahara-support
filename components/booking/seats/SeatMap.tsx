@@ -53,9 +53,9 @@ export function SeatMap({
                 },
                 (payload) => {
                     const updatedSeat = payload.new as SeatInventoryItem;
-                    if (updatedSeat.service_id === serviceId &&
-                        updatedSeat.event_date === eventDate &&
-                        updatedSeat.event_time === eventTime) {
+                    if (updatedSeat.serviceId === serviceId &&
+                        updatedSeat.eventDate === eventDate &&
+                        updatedSeat.eventTime === eventTime) {
                         updateSeatStatus(updatedSeat.seatLabel, updatedSeat.status);
                     }
                 }

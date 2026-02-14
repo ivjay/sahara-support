@@ -82,31 +82,31 @@ export function ChatMessage({ message }: ChatMessageProps) {
         <div
             className={cn(
                 "flex gap-3 mb-4",
-                isUser ? "flex-row-reverse animate-slide-in-right" : "flex-row animate-slide-in-left"
+                isUser ? "flex-row-reverse" : "flex-row"
             )}
         >
-            {/* Vibrant Avatar */}
+            {/* Simple Avatar */}
             <Avatar className={cn(
-                "h-10 w-10 flex items-center justify-center shrink-0 transition-all hover:scale-110 shadow-lg",
+                "h-9 w-9 flex items-center justify-center shrink-0",
                 isUser
-                    ? "bg-gradient-to-br from-primary via-chart-2 to-chart-3 shadow-primary/30 neon-glow"
-                    : "bg-gradient-to-br from-muted to-muted/50 border-2 border-primary/20"
+                    ? "bg-primary text-white"
+                    : "bg-muted border"
             )}>
                 {isUser ? (
-                    <User className="h-5 w-5 text-white" strokeWidth={2.5} />
+                    <User className="h-5 w-5" />
                 ) : (
-                    <HeartHandshake className="h-5 w-5 text-primary" strokeWidth={2} />
+                    <HeartHandshake className="h-5 w-5 text-primary" />
                 )}
             </Avatar>
 
             {/* Message Content */}
-            <div className={cn("flex flex-col max-w-[85%] lg:max-w-[75%]", isUser && "items-end")}>
+            <div className={cn("flex flex-col max-w-[80%]", isUser && "items-end")}>
                 <div
                     className={cn(
-                        "px-5 py-3.5 rounded-2xl text-[15px] leading-relaxed transition-all shadow-md hover:shadow-xl",
+                        "px-4 py-2.5 rounded-lg text-sm",
                         isUser
-                            ? "bg-gradient-to-br from-primary via-chart-2 to-chart-3 text-white rounded-br-md shadow-primary/30"
-                            : "bg-gradient-to-br from-card to-muted/50 border border-border/50 rounded-bl-md backdrop-blur-sm"
+                            ? "bg-primary text-white rounded-br-sm"
+                            : "bg-muted border rounded-bl-sm"
                     )}
                 >
                     <div className="whitespace-pre-wrap">
@@ -119,17 +119,16 @@ export function ChatMessage({ message }: ChatMessageProps) {
                     <Receipt data={message.receipt as any} />
                 )}
 
-                {/* Quick Replies with stagger animation */}
+                {/* Quick Replies */}
                 {!isUser && message.quickReplies && message.quickReplies.length > 0 && !message.content.includes("Verifying") && (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                        {message.quickReplies.map((reply, index) => (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                        {message.quickReplies.map((reply) => (
                             <Button
                                 key={reply}
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleQuickReply(reply)}
-                                className="h-8 text-[12px] rounded-full hover:bg-primary/10 hover:text-primary hover:border-primary/30 hover-scale animate-fade-in-up"
-                                style={{ animationDelay: `${index * 50}ms` }}
+                                className="h-7 text-xs rounded-full"
                             >
                                 {reply}
                             </Button>
@@ -138,12 +137,12 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 )}
 
                 {/* Actions & Timestamp */}
-                <div className="flex items-center gap-2 mt-1.5 px-1">
+                <div className="flex items-center gap-2 mt-1 px-1">
                     {!isUser && (
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 opacity-50 hover:opacity-100 hover:scale-110 transition-all"
+                            className="h-6 w-6 opacity-60 hover:opacity-100"
                             onClick={copyToClipboard}
                         >
                             {copied ? (

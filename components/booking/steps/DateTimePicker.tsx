@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { CalendarDays, Clock } from "lucide-react";
 
 interface DateTimePickerProps {
     serviceType: string;
@@ -27,6 +29,9 @@ export function DateTimePicker({
 }: DateTimePickerProps) {
     const [timeSlots, setTimeSlots] = useState<any[]>([]);
     const [loadingSlots, setLoadingSlots] = useState(false);
+    const [calendarDate, setCalendarDate] = useState<Date | undefined>(
+        selectedDate ? new Date(selectedDate) : undefined
+    );
 
     // Fetch time slots when date changes (for appointments)
     useEffect(() => {
@@ -50,42 +55,66 @@ export function DateTimePicker({
         }
     }
 
-    const minDate = new Date().toISOString().split('T')[0];
+    const handleDateSelect = (date: Date | undefined) => {
+        if (date) {
+            setCalendarDate(date);
+            // Convert to YYYY-MM-DD format
+            const dateStr = date.toISOString().split('T')[0];
+            onDateChange(dateStr);
+        }
+    };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             {/* Date Selection */}
             <div>
-                <Label className="text-lg font-semibold mb-2 block">Select Date</Label>
-                <Input
-                    type="date"
-                    min={minDate}
-                    value={selectedDate || ''}
-                    onChange={(e) => onDateChange(e.target.value)}
-                    className="text-lg p-6"
-                />
+                <div className="flex items-center gap-2 mb-4">
+                    <CalendarDays className="w-5 h-5 text-primary" />
+                    <Label className="text-lg font-semibold">Select Date</Label>
+                </div>
+                <Card className="p-4 w-fit mx-auto border-2 shadow-lg">
+                    <Calendar
+                        mode="single"
+                        selected={calendarDate}
+                        onSelect={handleDateSelect}
+                        disabled={(date) => date < today}
+                        className="rounded-lg"
+                    />
+                </Card>
             </div>
 
             {/* Time Selection */}
             {needsTime && selectedDate && (
                 <div>
-                    <Label className="text-lg font-semibold mb-2 block">
-                        {serviceType === 'appointment' ? 'Select Time Slot' : 'Select Showtime'}
-                    </Label>
+                    <div className="flex items-center gap-2 mb-4">
+                        <Clock className="w-5 h-5 text-primary" />
+                        <Label className="text-lg font-semibold">
+                            {serviceType === 'appointment' ? 'Select Time Slot' : 'Select Showtime'}
+                        </Label>
+                    </div>
 
                     {serviceType === 'appointment' ? (
                         // Time slots grid for appointments
                         loadingSlots ? (
-                            <div className="text-center py-4">Loading slots...</div>
-                        ) : (
-                            <div className="grid grid-cols-4 gap-2">
+                            <div className="text-center py-8">
+                                <div className="inline-flex items-center gap-2 text-muted-foreground">
+                                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                    Loading slots...
+                                </div>
+                            </div>
+                        ) : timeSlots.length > 0 ? (
+                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                                 {timeSlots.map((slot) => (
                                     <Button
                                         key={slot.time}
                                         variant={selectedTime === slot.time ? "default" : "outline"}
                                         className={cn(
-                                            "h-14",
-                                            slot.status !== 'available' && "opacity-50 cursor-not-allowed"
+                                            "h-12 font-medium transition-all",
+                                            selectedTime === slot.time && "shadow-lg shadow-primary/30 scale-105",
+                                            slot.status !== 'available' && "opacity-40 cursor-not-allowed"
                                         )}
                                         onClick={() => slot.status === 'available' && onTimeChange(slot.time)}
                                         disabled={slot.status !== 'available'}
@@ -94,15 +123,22 @@ export function DateTimePicker({
                                     </Button>
                                 ))}
                             </div>
+                        ) : (
+                            <div className="text-center py-8 text-muted-foreground">
+                                No slots available for this date
+                            </div>
                         )
                     ) : (
-                        // Simple time dropdown for movies
-                        <div className="grid grid-cols-3 gap-2">
+                        // Simple time options for movies
+                        <div className="grid grid-cols-3 gap-3">
                             {['15:00', '18:00', '21:00'].map((time) => (
                                 <Button
                                     key={time}
                                     variant={selectedTime === time ? "default" : "outline"}
-                                    className="h-14 text-lg"
+                                    className={cn(
+                                        "h-14 text-lg font-semibold transition-all",
+                                        selectedTime === time && "shadow-lg shadow-primary/30 scale-105"
+                                    )}
                                     onClick={() => onTimeChange(time)}
                                 >
                                     {formatTime(time)}
