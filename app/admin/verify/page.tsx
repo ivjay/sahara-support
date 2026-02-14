@@ -25,7 +25,7 @@ export default function VerifyPage() {
 
             // Filter for pending payments
             const pending = allBookings.filter(
-                b => b.status === 'Pending Payment' || b.status === 'Pending'
+                b => b.status === 'Pending Payment' || b.status === 'Pending' || b.status === 'Under Review'
             );
 
             setPendingBookings(pending);
@@ -46,12 +46,11 @@ export default function VerifyPage() {
 
             if (!res.ok) throw new Error('Verification failed');
 
-            // Remove from list
             setPendingBookings(prev => prev.filter(b => b.id !== id));
-            alert(`Booking ${newStatus === 'Confirmed' ? 'approved' : 'rejected'}!`);
+            alert(`✓ Booking ${newStatus === 'Confirmed' ? 'approved' : 'rejected'}!`);
         } catch (error) {
             console.error('Verification failed:', error);
-            alert('Failed to verify booking');
+            alert('❌ Failed to verify booking');
         }
     };
 
@@ -117,13 +116,13 @@ export default function VerifyPage() {
                                                 <p className="capitalize">{booking.type}</p>
                                             </div>
 
-                                            {/* Dynamic Details (Transaction ID, etc) */}
-                                            {Object.entries(booking.details).map(([key, value]) => (
+                                            {/* ✅ FIX: Check if details exists before mapping */}
+                                            {booking.details && Object.entries(booking.details).map(([key, value]) => (
                                                 <div key={key}>
                                                     <span className="text-muted-foreground block mb-1 capitalize">
                                                         {key.replace(/([A-Z])/g, ' $1').trim()}
                                                     </span>
-                                                    <p className="font-medium">{value || 'N/A'}</p>
+                                                    <p className="font-medium">{String(value) || 'N/A'}</p>
                                                 </div>
                                             ))}
                                         </div>

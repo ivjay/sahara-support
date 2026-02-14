@@ -28,6 +28,7 @@ export interface BookingOption {
     details: Record<string, string>; // ALL values must be strings!
     available: boolean;
     qrCodeUrl?: string;
+    venueId?: string; // For seat selection (movies, buses, flights)
 }
 
 // Individual chat message

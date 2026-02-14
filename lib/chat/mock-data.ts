@@ -71,6 +71,7 @@ export const MOCK_BUS_OPTIONS: BookingOption[] = [
             seats: "12 available",
         },
         available: true,
+        venueId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
     },
     {
         id: "bus-2",
@@ -86,6 +87,7 @@ export const MOCK_BUS_OPTIONS: BookingOption[] = [
             seats: "8 available",
         },
         available: true,
+        venueId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
     },
     {
         id: "bus-3",
@@ -101,6 +103,7 @@ export const MOCK_BUS_OPTIONS: BookingOption[] = [
             seats: "5 available",
         },
         available: true,
+        venueId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
     },
     {
         id: "bus-4",
@@ -116,6 +119,7 @@ export const MOCK_BUS_OPTIONS: BookingOption[] = [
             seats: "15 available",
         },
         available: true,
+        venueId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
     },
     {
         id: "bus-5",
@@ -131,6 +135,7 @@ export const MOCK_BUS_OPTIONS: BookingOption[] = [
             seats: "Available",
         },
         available: true,
+        venueId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
     },
     {
         id: "bus-6",
@@ -146,6 +151,7 @@ export const MOCK_BUS_OPTIONS: BookingOption[] = [
             seats: "10 available",
         },
         available: true,
+        venueId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
     },
     {
         id: "bus-7",
@@ -161,6 +167,7 @@ export const MOCK_BUS_OPTIONS: BookingOption[] = [
             seats: "6 available",
         },
         available: true,
+        venueId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
     },
     {
         id: "bus-8",
@@ -176,6 +183,7 @@ export const MOCK_BUS_OPTIONS: BookingOption[] = [
             seats: "20 available",
         },
         available: true,
+        venueId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
     },
     {
         id: "bus-9",
@@ -191,6 +199,7 @@ export const MOCK_BUS_OPTIONS: BookingOption[] = [
             seats: "15 available",
         },
         available: true,
+        venueId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
     },
     {
         id: "bus-10",
@@ -206,6 +215,7 @@ export const MOCK_BUS_OPTIONS: BookingOption[] = [
             seats: "8 available",
         },
         available: true,
+        venueId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
     },
 ];
 
@@ -225,6 +235,7 @@ export const MOCK_FLIGHT_OPTIONS: BookingOption[] = [
             class: "Economy",
         },
         available: true,
+        venueId: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
     },
     {
         id: "flight-2",
@@ -241,6 +252,7 @@ export const MOCK_FLIGHT_OPTIONS: BookingOption[] = [
             seats: "5 left",
         },
         available: true,
+        venueId: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
     },
     {
         id: "flight-3",
@@ -257,6 +269,7 @@ export const MOCK_FLIGHT_OPTIONS: BookingOption[] = [
             seats: "Available",
         },
         available: true,
+        venueId: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
     },
     {
         id: "flight-4",
@@ -272,6 +285,7 @@ export const MOCK_FLIGHT_OPTIONS: BookingOption[] = [
             class: "Charter",
         },
         available: true,
+        venueId: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
     },
     {
         id: "flight-5",
@@ -287,6 +301,7 @@ export const MOCK_FLIGHT_OPTIONS: BookingOption[] = [
             class: "Economy",
         },
         available: true,
+        venueId: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
     },
     {
         id: "flight-6",
@@ -302,6 +317,7 @@ export const MOCK_FLIGHT_OPTIONS: BookingOption[] = [
             class: "Economy",
         },
         available: true,
+        venueId: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
     },
     {
         id: "flight-7",
@@ -317,6 +333,7 @@ export const MOCK_FLIGHT_OPTIONS: BookingOption[] = [
             class: "Economy",
         },
         available: true,
+        venueId: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
     },
     {
         id: "flight-8",
@@ -332,6 +349,7 @@ export const MOCK_FLIGHT_OPTIONS: BookingOption[] = [
             class: "Economy",
         },
         available: true,
+        venueId: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
     },
     {
         id: "flight-9",
@@ -347,37 +365,141 @@ export const MOCK_FLIGHT_OPTIONS: BookingOption[] = [
             class: "Tourist",
         },
         available: true,
+        venueId: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
     },
 ];
 
 // Mock appointment options
 export const MOCK_APPOINTMENT_OPTIONS: BookingOption[] = [
+    // Pediatricians
+    {
+        id: "apt-ped-1",
+        type: "appointment",
+        category: "pediatrician",
+        title: "Dr. Suman Shrestha",
+        subtitle: "Pediatrician - Child Specialist",
+        price: 800,
+        currency: "NPR",
+        details: {
+            hospital: "Apollo Clinic Kathmandu",
+            address: "Kupondole, Lalitpur, Near Yala Maya Kendra",
+            phone: "+977-1-5545678",
+            experience: "12 years",
+            nextSlot: "Tomorrow 10:00 AM",
+            rating: "⭐ 4.9",
+            specialization: "Child Health, Vaccination"
+        },
+        available: true,
+    },
+    {
+        id: "apt-ped-2",
+        type: "appointment",
+        category: "pediatrician",
+        title: "Dr. Anjali Pradhan",
+        subtitle: "Pediatrician - Newborn Care",
+        price: 1000,
+        currency: "NPR",
+        details: {
+            hospital: "Grande International Hospital",
+            address: "Dhapasi, Kathmandu, Near Ring Road",
+            phone: "+977-1-4217766",
+            experience: "18 years",
+            nextSlot: "Today 3:00 PM",
+            rating: "⭐ 5.0",
+            specialization: "Newborn Care, Child Development"
+        },
+        available: true,
+    },
+    {
+        id: "apt-ped-3",
+        type: "appointment",
+        category: "pediatrician",
+        title: "Dr. Ramesh Khadka",
+        subtitle: "Pediatrician - Child Health Expert",
+        price: 700,
+        currency: "NPR",
+        details: {
+            hospital: "CIWEC Hospital",
+            address: "Lainchaur, Kathmandu, Near British Embassy",
+            phone: "+977-1-4424111",
+            experience: "10 years",
+            nextSlot: "Tomorrow 2:00 PM",
+            rating: "⭐ 4.7",
+            specialization: "General Child Health, Fever Management"
+        },
+        available: true,
+    },
+    // Psychologists
+    {
+        id: "apt-psy-1",
+        type: "appointment",
+        category: "psychologist",
+        title: "Dr. Priya Lama",
+        subtitle: "Clinical Psychologist - Mental Health",
+        price: 1500,
+        currency: "NPR",
+        details: {
+            hospital: "Mind Care Nepal",
+            address: "Jhamsikhel, Lalitpur, Near Jhamsikhel Chowk",
+            phone: "+977-1-5547890",
+            experience: "15 years",
+            nextSlot: "Tomorrow 11:00 AM",
+            rating: "⭐ 4.8",
+            specialization: "Therapy, Counseling, Depression, Anxiety"
+        },
+        available: true,
+    },
+    {
+        id: "apt-psy-2",
+        type: "appointment",
+        category: "psychologist",
+        title: "Dr. Binod Maharjan",
+        subtitle: "Psychologist - Cognitive Therapy",
+        price: 1200,
+        currency: "NPR",
+        details: {
+            hospital: "Sahara Counseling Center",
+            address: "Baneshwor, Kathmandu, Near Minbhawan",
+            phone: "+977-1-4781234",
+            experience: "10 years",
+            nextSlot: "Today 4:00 PM",
+            rating: "⭐ 4.6",
+            specialization: "CBT, Mental Health, Family Counseling"
+        },
+        available: true,
+    },
+    // General Physicians
     {
         id: "apt-1",
         type: "appointment",
-        category: "doctor",
+        category: "general",
         title: "Dr. Sharma",
         subtitle: "General Physician",
         price: 500,
         currency: "NPR",
         details: {
             hospital: "City Hospital",
+            address: "Thapathali, Kathmandu",
+            phone: "+977-1-4240000",
             experience: "15 years",
             nextSlot: "Tomorrow 10:00 AM",
             rating: "⭐ 4.8",
         },
         available: true,
     },
+    // Cardiologists
     {
         id: "apt-2",
         type: "appointment",
-        category: "doctor",
+        category: "cardiologist",
         title: "Dr. Thapa",
         subtitle: "Cardiologist",
         price: 1500,
         currency: "NPR",
         details: {
             hospital: "Heart Care Center",
+            address: "Maharajgunj, Kathmandu",
+            phone: "+977-1-4412266",
             experience: "20 years",
             nextSlot: "Thursday 2:00 PM",
             rating: "⭐ 4.9",
@@ -613,6 +735,7 @@ export const MOCK_MOVIE_OPTIONS: BookingOption[] = [
             rating: "⭐ 4.5",
         },
         available: true,
+        venueId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     },
     {
         id: "movie-4",
@@ -629,6 +752,7 @@ export const MOCK_MOVIE_OPTIONS: BookingOption[] = [
             rating: "⭐ 4.7",
         },
         available: true,
+        venueId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     },
     {
         id: "movie-5",
@@ -645,6 +769,7 @@ export const MOCK_MOVIE_OPTIONS: BookingOption[] = [
             rating: "⭐ 4.6",
         },
         available: true,
+        venueId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     },
     {
         id: "movie-6",
@@ -661,6 +786,7 @@ export const MOCK_MOVIE_OPTIONS: BookingOption[] = [
             rating: "⭐ 4.5",
         },
         available: true,
+        venueId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     },
     {
         id: "movie-7",
@@ -677,6 +803,7 @@ export const MOCK_MOVIE_OPTIONS: BookingOption[] = [
             rating: "⭐ 4.2",
         },
         available: true,
+        venueId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     },
     {
         id: "movie-8",
@@ -693,6 +820,7 @@ export const MOCK_MOVIE_OPTIONS: BookingOption[] = [
             rating: "⭐ 4.1",
         },
         available: true,
+        venueId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     },
     {
         id: "movie-2",
@@ -709,6 +837,7 @@ export const MOCK_MOVIE_OPTIONS: BookingOption[] = [
             rating: "⭐ 4.8",
         },
         available: true,
+        venueId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     },
     {
         id: "movie-3",
@@ -725,6 +854,7 @@ export const MOCK_MOVIE_OPTIONS: BookingOption[] = [
             rating: "⭐ 4.9",
         },
         available: true,
+        venueId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     },
     {
         id: "event-1",
@@ -741,6 +871,7 @@ export const MOCK_MOVIE_OPTIONS: BookingOption[] = [
             rating: "⭐ 4.9",
         },
         available: true,
+        venueId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     },
     {
         id: "event-2",
@@ -757,6 +888,7 @@ export const MOCK_MOVIE_OPTIONS: BookingOption[] = [
             rating: "⭐ 5.0",
         },
         available: true,
+        venueId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     },
     {
         id: "event-3",
@@ -773,6 +905,7 @@ export const MOCK_MOVIE_OPTIONS: BookingOption[] = [
             rating: "⭐ 4.7",
         },
         available: true,
+        venueId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     },
     {
         id: "event-4",
@@ -789,6 +922,7 @@ export const MOCK_MOVIE_OPTIONS: BookingOption[] = [
             rating: "⭐ 4.6",
         },
         available: true,
+        venueId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     },
 ];
 

@@ -108,6 +108,7 @@ export async function PATCH(request: Request) {
  */
 export async function DELETE() {
     try {
+
         await db.clear();
         console.log('[API] ✓ All bookings cleared');
         return NextResponse.json({ success: true, message: 'All bookings cleared' });

@@ -25,6 +25,9 @@ export interface BookingRepository {
     getById(id: string): Promise<BookingRecord | undefined>;
     create(booking: BookingRecord): Promise<BookingRecord>;
     updateStatus(id: string, status: BookingRecord['status']): Promise<BookingRecord | null>;
+    update(id: string, data: Partial<BookingRecord>): Promise<BookingRecord | null>;
+    delete(id: string): Promise<boolean>;
+    clear(): Promise<void>;
 }
 
 // File-based implementation with robust error handling
@@ -88,6 +91,32 @@ export const db: BookingRepository = {
         all[index] = { ...all[index], status };
         await writeDb(all);
         return all[index];
+    },
+
+    async update(id: string, data: Partial<BookingRecord>) {
+        const all = await readDb();
+        const index = all.findIndex(b => b.id === id);
+
+        if (index === -1) return null;
+
+        all[index] = { ...all[index], ...data };
+        await writeDb(all);
+        return all[index];
+    },
+
+    async delete(id: string) {
+        const all = await readDb();
+        const initialLength = all.length;
+        const filtered = all.filter(b => b.id !== id);
+
+        if (filtered.length === initialLength) return false;
+
+        await writeDb(filtered);
+        return true;
+    },
+
+    async clear() {
+        await writeDb([]);
     }
-    
+
 };

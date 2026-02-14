@@ -37,18 +37,27 @@ export default function ServiceProviderPage() {
     const handleSave = async () => {
         if (!service) return;
         setIsSaving(true);
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 500));
 
-        updateService(serviceId, service);
-        setIsSaving(false);
-        alert("Changes saved successfully!");
+        try {
+            await updateService(serviceId, service);
+            setIsSaving(false);
+            alert("Changes saved successfully!");
+        } catch (error) {
+            console.error('[Admin] ✗ Save failed:', error);
+            setIsSaving(false);
+            alert("Failed to save changes. Please try again.");
+        }
     };
 
-    const handleDelete = () => {
+    const handleDelete = async () => {
         if (confirm("Are you sure you want to delete this service?")) {
-            deleteService(serviceId);
-            router.push('/admin');
+            try {
+                await deleteService(serviceId);
+                router.push('/admin');
+            } catch (error) {
+                console.error('[Admin] ✗ Delete failed:', error);
+                alert("Failed to delete service. Please try again.");
+            }
         }
     };
 

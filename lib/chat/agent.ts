@@ -44,90 +44,131 @@ const CASH_OPTION: BookingOption = {
 export async function processMessage(
     userMessage: string,
     currentBooking: BookingState | null,
-    allServices: BookingOption[] = []
+    allServices: BookingOption[] = [],
+    history: Array<{ role: "user" | "assistant"; content: string }> = []
 ): Promise<AgentResponse> {
 
-    // HARDCODED INTERCEPTION: Handle Payment Verification
+    // ✅ IMPROVED: Handle Payment Verification (Only trigger when user confirms payment)
     if (currentBooking && currentBooking.intent !== 'UNKNOWN') {
         const msg = userMessage.toLowerCase();
-        // Check for common payment confirmation phrases
-        if (msg.includes("paid") || msg.includes("done") || msg.includes("complete") || msg.includes("ok")) {
-            // Ensure unique receipt: Check if already complete to avoid double-firing (though UI handles it too)
-            if (currentBooking.isComplete) return { content: "This booking is already confirmed! ✅", newBookingState: currentBooking };
 
-            // Return "Waiting for Verification" message
+        // Check if user is confirming they've paid (more specific keywords)
+        const paymentConfirmed = (
+            (msg.includes("paid") || msg.includes("payment") && (msg.includes("done") || msg.includes("completed"))) ||
+            msg.includes("i have paid") ||
+            msg.includes("payment done") ||
+            msg.includes("paid gareko") ||
+            msg.includes("payment garisakeko")
+        );
+
+        if (paymentConfirmed) {
+            if (currentBooking.isComplete) {
+                return {
+                    content: "This booking is already confirmed! ✅\n\nYour payment has been verified. Check your receipt above.",
+                    newBookingState: currentBooking
+                };
+            }
+
             return {
-                content: `⏳ **Verifying Payment...**\n\nPlease wait a moment while our admin confirms your payment details.\n\nWe will send you the receipt shortly!`,
-                quickReplies: [], // No quick replies, keep them waiting or allow query? User said 'dont just end conversation'
+                content: `⏳ **Payment Submitted!**\n\nThank you! Your payment confirmation has been sent to our admin team for verification.\n\n**What happens next:**\n1. Admin will verify your payment (usually within 2-5 minutes)\n2. You'll receive a confirmation message here\n3. Your digital receipt will be generated\n\n*Please keep this chat open to receive your confirmation.*`,
+                quickReplies: ["Check status", "Contact support"],
                 newBookingState: {
                     ...currentBooking,
-                    collectedData: { ...currentBooking.collectedData, verificationPending: "true" }, // Flag for UI to listen
-                    step: 3, // Stay on payment step
-                    isComplete: false // Do NOT trigger receipt yet
+                    collectedData: {
+                        ...currentBooking.collectedData,
+                        verificationPending: "true",
+                        paymentSubmittedAt: new Date().toISOString()
+                    },
+                    step: 4,
+                    isComplete: true
                 }
             };
         }
     }
 
-    // Call AI with empty history for now (we can add conversation history later)
-    const aiResponse = await getAgentResponse(userMessage, []);
+    // ✅ Call AI - LLM is in FULL CONTROL
+    const aiResponse = await getAgentResponse(userMessage, history);
+    console.log("[Agent] 🤖 LLM Response:", aiResponse);
 
-    console.log("[Agent] AI Response:", aiResponse);
+    // ✅ TRUST THE LLM - Use its decisions directly
+    let showOptions = aiResponse.show_options;
+    let optionType = aiResponse.option_type;
+    let filterCategory = aiResponse.filter_category;
 
-    // Map new System Prompt v2.0 response to legacy format
-    let showOptions = aiResponse.showOptions;
-    let filterCategory = aiResponse.filterCategory;
-
-    // ✅ FIX: Show options during BOTH gathering AND confirming stages
-    if (!showOptions && aiResponse.booking_type) {
-        // Show options when gathering info OR confirming
-        if (aiResponse.stage === 'gathering' || aiResponse.stage === 'confirming') {
-            const typeMap: Record<string, "BUS_BOOKING" | "FLIGHT_BOOKING" | "APPOINTMENT" | "MOVIE_BOOKING"> = {
-                'bus': 'BUS_BOOKING',
-                'flight': 'FLIGHT_BOOKING',
-                'doctor': 'APPOINTMENT',
-                'salon': 'APPOINTMENT',
-                'movie': 'MOVIE_BOOKING'
-            };
-            showOptions = typeMap[aiResponse.booking_type] || null;
-            
-            console.log(`[Agent] Mapped ${aiResponse.booking_type} + ${aiResponse.stage} → ${showOptions}`);
+    // 🛡️ SAFETY NET: Force show_options if LLM forgot
+    const msg = userMessage.toLowerCase();
+    if (!showOptions || showOptions === undefined) {
+        // Check for general service requests first
+        if (msg.includes('what services') || msg.includes('show services') || msg.includes('what options') ||
+            msg.includes('show options') || msg.includes('where are') && msg.includes('options') ||
+            msg.includes('available') && (msg.includes('services') || msg.includes('options')) ||
+            msg.includes('what can you') || msg.includes('what do you offer')) {
+            console.log("[Agent] 🛡️ SAFETY NET: General service request - showing all doctors");
+            showOptions = true;
+            optionType = "doctor";
+            filterCategory = undefined; // Show all doctors
+        }
+        // Check for specific service keywords
+        else if (msg.includes('therapy') || msg.includes('psychologist') || msg.includes('therapist') ||
+                 msg.includes('counseling') || msg.includes('anxious') || msg.includes('anxiety') ||
+                 msg.includes('mental health') || msg.includes('depression')) {
+            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for therapy request");
+            showOptions = true;
+            optionType = "doctor";
+            filterCategory = "psychologist";
+        } else if (msg.includes('pediatrician') || msg.includes('child doctor') || msg.includes('baby doctor') ||
+                   msg.includes('child') && msg.includes('doctor')) {
+            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for pediatrician request");
+            showOptions = true;
+            optionType = "doctor";
+            filterCategory = "pediatrician";
+        } else if (msg.includes('doctor') || msg.includes('appointment') ||
+                   (msg.includes('visit') || msg.includes('see')) && (msg.includes('hospital') || msg.includes('clinic'))) {
+            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for doctor request");
+            showOptions = true;
+            optionType = "doctor";
+        } else if (msg.includes('bus') || msg.includes('travel') && !msg.includes('flight')) {
+            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for bus request");
+            showOptions = true;
+            optionType = "bus";
+        } else if (msg.includes('flight') || msg.includes('fly') || msg.includes('plane')) {
+            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for flight request");
+            showOptions = true;
+            optionType = "flight";
+        } else if (msg.includes('movie') || msg.includes('cinema') || msg.includes('film')) {
+            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for movie request");
+            showOptions = true;
+            optionType = "movie";
         }
     }
 
-    // Smart extraction: If AI didn't provide filterCategory but mentioned a specialty
-    if (!filterCategory && aiResponse.content) {
-        const content = aiResponse.content.toLowerCase();
+    console.log(`[Agent] LLM Decisions:`, {
+        showOptions,
+        optionType,
+        filterCategory
+    });
 
-        // Extract specialty keywords from AI response
-        const specialtyKeywords = {
-            'cardiologist': /(cardiologist|heart doctor|cardiac|cardio)/,
-            'dentist': /(dentist|dental|teeth|tooth|oral)/,
-            'dermatologist': /(dermatologist|skin doctor|derma)/,
-            'gynecologist': /(gynecologist|women doctor|maternity|gyno)/,
-            'urologist': /(urologist|kidney doctor|urology)/,
-            'nephrologist': /(nephrologist|kidney specialist|nephro)/,
-            'plumber': /(plumber|plumbing|pipe)/,
-            'electrician': /(electrician|electric|wiring)/,
-            'salon': /(salon|hair|barber|grooming)/,
-            'makeup': /(makeup|bridal|party makeup)/,
-            'tailor': /(tailor|stitching|alteration)/,
+    // ✅ LLM ALREADY EXTRACTED - No need for hardcoded keywords!
+    // The LLM sets filter_category in its response
+    // We just use it directly
+
+    // ✅ FETCH OPTIONS based on LLM's decision
+    let finalOptions: BookingOption[] | undefined;
+    if (showOptions && optionType) {
+        // Map LLM's option_type to our internal type
+        const typeMap: Record<string, string> = {
+            'doctor': 'APPOINTMENT',
+            'salon': 'APPOINTMENT',
+            'movie': 'MOVIE_BOOKING',
+            'bus': 'BUS_BOOKING',
+            'flight': 'FLIGHT_BOOKING'
         };
 
-        for (const [specialty, pattern] of Object.entries(specialtyKeywords)) {
-            if (pattern.test(content)) {
-                filterCategory = specialty;
-                console.log(`[Agent] Extracted specialty from content: ${specialty}`);
-                break;
-            }
-        }
-    }
+        const internalType = typeMap[optionType] || optionType.toUpperCase() + '_BOOKING';
+        finalOptions = getOptionsByType(internalType, filterCategory, allServices);
 
-    // Fetch options if needed
-    let finalOptions: BookingOption[] | undefined;
-    if (showOptions) {
-        finalOptions = getOptionsByType(showOptions, filterCategory, allServices);
-        console.log(`[Agent] Filtered ${finalOptions.length} options for ${showOptions} with category ${filterCategory || 'none'}`);
+        console.log(`[Agent] ✅ LLM wanted ${optionType} (${filterCategory || 'all'})`);
+        console.log(`[Agent] ✅ Showing ${finalOptions.length} options`);
     }
 
     return {
@@ -138,20 +179,23 @@ export async function processMessage(
     };
 }
 
-// Handle option selection
 export async function handleOptionSelection(
     option: BookingOption,
     currentBooking?: BookingState | null
 ): Promise<AgentResponse> {
     await delay(600);
 
-    // 1. Handle "Pay at Counter" Selection (Instant Confirmation)
     if (option.type === 'payment_cash') {
         const existingData = currentBooking?.collectedData || {};
-        const priceDisplay = option.price ? `${option.currency || 'NPR'} ${option.price}` : "Pay at Counter";
+        const isFree = !option.price || option.price === 0;
+        const priceDisplay = isFree ? "Free / Pay at Counter" : `${option.currency || 'NPR'} ${option.price}`;
+
+        const content = isFree
+            ? `✅ **Booking Confirmed!**\n\nYour booking has been successfully confirmed. Since there is no booking fee, you can proceed directly to the service provider.`
+            : `✅ **Reservation Confirmed!**\n\nYou have chosen to pay at the counter. Please arrive **15 minutes early** to handle your booking at the counter and complete the payment.\n\nHere is your reservation receipt:`;
 
         return {
-            content: `✅ **Reservation Confirmed!**\n\nYou have chosen to pay at the counter. Please arrive 15 minutes early to complete the payment.\n\nHere is your reservation receipt:`,
+            content,
             quickReplies: ["Book another", "View my bookings"],
             newBookingState: {
                 intent: currentBooking?.intent || "APPOINTMENT",
@@ -159,7 +203,7 @@ export async function handleOptionSelection(
                 collectedData: {
                     ...existingData,
                     price: priceDisplay,
-                    cash: "true" // Add cash flag to properly identify Pay at Counter bookings
+                    cash: "true"
                 },
                 requiredFields: [],
                 isComplete: true
@@ -167,7 +211,6 @@ export async function handleOptionSelection(
         };
     }
 
-    // 2. Handle "Scan to Pay" Selection (Just show QR)
     if (option.type === 'payment_qr') {
         return {
             content: `📱 **Scan to Pay**\n\nPlease scan the QR code below with your favorite payment app (Esewa/Khalti).\n\nType **"I have paid"** when you're done!`,
@@ -176,7 +219,6 @@ export async function handleOptionSelection(
         };
     }
 
-    // 3. Handle Service Selection (Show Payment Options)
     const paymentRequestMessages: Record<string, string> = {
         bus: `🚌 **Confirm Selection: ${option.title}**\n\n📍 Route: ${option.details.departure || 'Kathmandu'} departure\n💰 **Amount Due: ${option.currency} ${option.price}**\n\nHow would you like to pay?`,
         flight: `✈️ **Confirm Selection: ${option.title}**\n\n🛫 Flight to: ${option.details.departure || 'Destination'}\n💰 **Amount Due: ${option.currency} ${option.price}**\n\nHow would you like to pay?`,
@@ -187,7 +229,6 @@ export async function handleOptionSelection(
     const message = paymentRequestMessages[option.type] ||
         `**Confirm Selection: ${option.title}**\n\n💰 Total: ${option.currency} ${option.price}\n\nHow would you like to pay?`;
 
-    // Map option type to Intent
     const intentMap: Record<string, Intent> = {
         bus: "BUS_BOOKING",
         flight: "FLIGHT_BOOKING",
@@ -195,7 +236,6 @@ export async function handleOptionSelection(
         movie: "MOVIE_BOOKING"
     };
 
-    // Prepare metadata
     const collectedData = {
         serviceId: option.id,
         from: option.details.route || option.title,
@@ -208,7 +248,14 @@ export async function handleOptionSelection(
         price: `${option.currency} ${option.price}`
     };
 
-    // Dynamic Cash Option with correct price
+    // ✅ FIX: Create dynamic QR option with actual price
+    const dynamicQROption: BookingOption = {
+        ...QR_OPTION,
+        price: option.price,
+        currency: option.currency,
+        subtitle: `Total: ${option.currency} ${option.price}`
+    };
+
     const dynamicCashOption: BookingOption = {
         ...CASH_OPTION,
         price: option.price,
@@ -218,7 +265,7 @@ export async function handleOptionSelection(
 
     return {
         content: message,
-        options: [QR_OPTION, dynamicCashOption], // Show Dynamic Cash Option
+        options: [dynamicQROption, dynamicCashOption],
         quickReplies: ["Cancel"],
         newBookingState: {
             intent: intentMap[option.type] || "UNKNOWN",
@@ -230,7 +277,6 @@ export async function handleOptionSelection(
     };
 }
 
-// Get welcome message
 export function getWelcomeMessage(): Message {
     return {
         id: generateId(),

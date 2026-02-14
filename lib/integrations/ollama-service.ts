@@ -86,10 +86,10 @@ async function httpRequest(
             });
         });
 
-        // Set timeout to prevent hanging the whole app (60s for local LLMs)
-        req.setTimeout(60000, () => {
+        // Set timeout to prevent hanging the whole app (30s for local LLMs)
+        req.setTimeout(30000, () => {
             req.destroy();
-            reject(new Error('Ollama request timed out after 60 seconds. The model might be loading or the server is slow. Check your CPU/GPU usage.'));
+            reject(new Error('Ollama request timed out after 30 seconds. The model might be loading or the server is slow. Check your CPU/GPU usage.'));
         });
 
         req.on('error', (error) => {
@@ -114,9 +114,10 @@ export async function chat(
         temperature?: number;
         stream?: boolean;
         retries?: number;
+        forceJson?: boolean;
     }
 ): Promise<OllamaChatResponse> {
-    const maxRetries = options?.retries || 3;
+    const maxRetries = options?.retries || 1; // ✅ REDUCED: Only 1 attempt for faster responses
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -127,13 +128,14 @@ export async function chat(
                 model: OLLAMA_MODEL,
                 messages,
                 stream: options?.stream || false,
-                format: 'json',
+                // ✅ FIXED: Only force JSON when explicitly requested (faster inference)
+                ...(options?.forceJson && { format: 'json' }),
                 options: {
                     temperature: options?.temperature || 0.7,
                 },
             };
 
-            console.log(`[Ollama] Attempt ${attempt}/${maxRetries} - Sending request to ${OLLAMA_BASE_URL}/api/chat`);
+            console.log(`[Ollama] Sending request to ${OLLAMA_BASE_URL}/api/chat`);
 
             const response = await httpRequest(
                 `${OLLAMA_BASE_URL}/api/chat`,
@@ -169,7 +171,7 @@ export async function chat(
             return chatResponse as OllamaChatResponse;
         } catch (error) {
             lastError = error as Error;
-            console.error(`[Ollama] ✗ Attempt ${attempt}/${maxRetries} failed:`, error);
+            console.error(`[Ollama] ✗ Request failed:`, error);
 
             if (attempt < maxRetries) {
                 const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);

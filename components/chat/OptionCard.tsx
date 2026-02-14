@@ -1,8 +1,9 @@
 "use client";
 
 import { BookingOption } from "@/lib/chat/types";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Bus, Plane, Calendar, Film, Stethoscope, CreditCard, Wallet } from "lucide-react";
 
 interface OptionCardProps {
     option: BookingOption;
@@ -10,29 +11,73 @@ interface OptionCardProps {
 }
 
 export function OptionCard({ option, onSelect }: OptionCardProps) {
+    const getIcon = () => {
+        switch (option.type) {
+            case "bus": return <Bus className="h-5 w-5" />;
+            case "flight": return <Plane className="h-5 w-5" />;
+            case "movie": return <Film className="h-5 w-5" />;
+            case "appointment": return <Stethoscope className="h-5 w-5" />;
+            case "payment_qr": return <CreditCard className="h-5 w-5" />;
+            case "payment_cash": return <Wallet className="h-5 w-5" />;
+            default: return <Calendar className="h-5 w-5" />;
+        }
+    };
+
     return (
-        <button
-            onClick={() => option.available && onSelect(option)}
-            disabled={!option.available}
-            className={cn(
-                "w-full text-left p-3 rounded-lg border",
-                "transition-colors duration-150",
-                option.available
-                    ? "border-gray-200 hover:border-blue-500 hover:bg-blue-50 dark:border-gray-700 dark:hover:border-blue-500 dark:hover:bg-blue-950/30"
-                    : "border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed dark:border-gray-800 dark:bg-gray-900"
-            )}
+        <Card
+            onClick={() => onSelect(option)}
+            className="p-4 hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer group"
         >
-            <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-sm mb-0.5">{option.title}</h4>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">{option.subtitle}</p>
+            <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-110 transition-transform shrink-0">
+                    {getIcon()}
                 </div>
-                {option.price && (
-                    <span className="text-sm font-semibold shrink-0">
-                        {option.currency} {option.price}
-                    </span>
-                )}
+                <div className="flex-1 min-w-0">
+                    {/* Title & Rating */}
+                    <div className="flex items-start justify-between mb-1">
+                        <h4 className="font-semibold text-sm">{option.title}</h4>
+                        {option.details?.rating && (
+                            <span className="text-xs ml-2 shrink-0">{option.details.rating}</span>
+                        )}
+                    </div>
+
+                    {/* Subtitle/Specialty */}
+                    <p className="text-xs text-muted-foreground mb-2">{option.subtitle}</p>
+
+                    {/* Hospital & Address - SEO Style */}
+                    {option.details?.hospital && (
+                        <div className="mb-2">
+                            <p className="text-xs font-medium text-foreground">{option.details.hospital}</p>
+                            {option.details?.address && (
+                                <p className="text-[10px] text-muted-foreground">
+                                    📍 {option.details.address}
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Phone Number */}
+                    {option.details?.phone && (
+                        <p className="text-[10px] text-muted-foreground mb-2">
+                            📞 {option.details.phone}
+                        </p>
+                    )}
+
+                    {/* Next Slot */}
+                    {option.details?.nextSlot && (
+                        <p className="text-[10px] text-green-600 mb-1">
+                            ⏰ Available: {option.details.nextSlot}
+                        </p>
+                    )}
+
+                    {/* Price */}
+                    {option.price > 0 && (
+                        <p className="text-sm font-bold text-primary mt-2">
+                            {option.currency} {option.price}
+                        </p>
+                    )}
+                </div>
             </div>
-        </button>
+        </Card>
     );
 }

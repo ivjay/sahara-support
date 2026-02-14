@@ -39,7 +39,7 @@ export async function GET() {
         // Test 3: Fetch latest booking
         const { data: latestBooking } = await supabase!
             .from('bookings')
-            .select('booking_id, booking_type, created_at')
+            .select('id, booking_type, created_at')
             .order('created_at', { ascending: false })
             .limit(1);
 

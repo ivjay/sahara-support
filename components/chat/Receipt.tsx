@@ -12,11 +12,15 @@ interface ReceiptProps {
         location: string;
         date: string;
         time: string;
+        seats?: string;
+        passengers?: number;
         price: string;
-        status: "Confirmed" | "Pending" | "Cancelled";
+        status: "Confirmed" | "Pending" | "Under Review" | "Cancelled";
         userName: string;
         userPhone: string;
         timestamp: string;
+        paymentMethod?: 'qr' | 'cash';
+        qrCodeUrl?: string;
     };
 }
 
@@ -27,11 +31,29 @@ export function Receipt({ data }: ReceiptProps) {
 
     return (
         <Card className="w-full max-w-sm mx-auto shadow-lg border-t-4 border-t-primary overflow-hidden">
-            <div className="bg-primary/5 p-6 text-center">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <CheckCircle2 className="w-6 h-6 text-green-600" />
+            <div className={`p-6 text-center ${
+                data.status === 'Confirmed' ? 'bg-green-50 dark:bg-green-950/20' :
+                data.status === 'Under Review' ? 'bg-yellow-50 dark:bg-yellow-950/20' :
+                'bg-primary/5'
+            }`}>
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${
+                    data.status === 'Confirmed' ? 'bg-green-100' :
+                    data.status === 'Under Review' ? 'bg-yellow-100' :
+                    'bg-blue-100'
+                }`}>
+                    {data.status === 'Confirmed' ? (
+                        <CheckCircle2 className="w-6 h-6 text-green-600" />
+                    ) : data.status === 'Under Review' ? (
+                        <Clock className="w-6 h-6 text-yellow-600" />
+                    ) : (
+                        <CheckCircle2 className="w-6 h-6 text-blue-600" />
+                    )}
                 </div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Booking Confirmed!</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                    {data.status === 'Confirmed' ? 'Booking Confirmed!' :
+                     data.status === 'Under Review' ? 'Payment Under Review' :
+                     'Booking Received'}
+                </h2>
                 <p className="text-sm text-muted-foreground mt-1">Receipt ID: {data.id}</p>
             </div>
 
@@ -69,12 +91,65 @@ export function Receipt({ data }: ReceiptProps) {
                         </span>
                     </div>
 
+                    {/* Seats */}
+                    {data.seats && data.seats !== 'N/A' && (
+                        <div className="flex justify-between border-b border-dashed pb-3">
+                            <span className="text-muted-foreground">Seats</span>
+                            <span className="font-medium text-right">{data.seats}</span>
+                        </div>
+                    )}
+
+                    {/* Passengers */}
+                    {data.passengers && (
+                        <div className="flex justify-between border-b border-dashed pb-3">
+                            <span className="text-muted-foreground">Passengers</span>
+                            <span className="font-medium text-right">{data.passengers} {data.passengers === 1 ? 'Person' : 'People'}</span>
+                        </div>
+                    )}
+
+                    {/* Payment Method */}
+                    {data.paymentMethod && (
+                        <div className="flex justify-between border-b border-dashed pb-3">
+                            <span className="text-muted-foreground">Payment</span>
+                            <span className="font-medium text-right">
+                                {data.paymentMethod === 'qr' ? '💳 Online (QR)' : '💵 Cash on Visit'}
+                            </span>
+                        </div>
+                    )}
+
                     {/* Customer Details */}
                     <div className="flex justify-between pt-1">
                         <span className="text-muted-foreground">Customer</span>
                         <span className="font-medium text-right">{data.userName}</span>
                     </div>
+
+                    {/* Phone */}
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Contact</span>
+                        <span className="font-medium text-right">{data.userPhone}</span>
+                    </div>
                 </div>
+
+                {/* QR Code for Online Payments */}
+                {data.status === 'Under Review' && data.paymentMethod === 'qr' && (
+                    <div className="mt-6 p-4 bg-primary/5 rounded-lg border-2 border-dashed border-primary/30">
+                        <p className="text-sm font-semibold text-center mb-3">Complete Payment</p>
+                        <div className="w-48 h-48 mx-auto bg-white flex items-center justify-center rounded border-2">
+                            {data.qrCodeUrl ? (
+                                <img src={data.qrCodeUrl} alt="QR Code" className="w-full h-full" />
+                            ) : (
+                                <div className="text-center p-4">
+                                    <div className="text-4xl mb-2">📱</div>
+                                    <p className="text-xs text-gray-600">Scan with eSewa/Khalti</p>
+                                    <p className="text-xs text-gray-500 mt-1">Amount: {data.price}</p>
+                                </div>
+                            )}
+                        </div>
+                        <p className="text-xs text-center mt-3 text-muted-foreground">
+                            ⏳ Awaiting payment verification from admin
+                        </p>
+                    </div>
+                )}
             </CardContent>
 
             <Separator />

@@ -30,6 +30,25 @@ export const BookingApi = {
         return res.json();
     },
 
+    async update(id: string, updates: Partial<BookingRecord>): Promise<BookingRecord> {
+        const res = await fetch('/api/bookings', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, ...updates }),
+            cache: 'no-store'
+        });
+        if (!res.ok) throw new Error("Failed to update booking");
+        return res.json();
+    },
+
+    async delete(id: string): Promise<void> {
+        const res = await fetch(`/api/bookings?id=${id}`, {
+            method: 'DELETE',
+            cache: 'no-store'
+        });
+        if (!res.ok) throw new Error("Failed to delete booking");
+    },
+
     async deleteAll(): Promise<void> {
         const res = await fetch('/api/bookings', {
             method: 'DELETE',

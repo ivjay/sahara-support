@@ -123,7 +123,7 @@ export function ChatContainer({ onOptionSelect, onSend }: ChatContainerProps) {
                         <ChatMessage message={message} />
 
                         {/* Show options if present - Grid Layout (Hide during verification) */}
-                        {message.options && message.options.length > 0 && !message.content.includes("Verifying") && (
+                        {message.options && message.options.length > 0 && !message.content?.includes("Verifying") && (
                             <div className="ml-12 mb-6 max-w-2xl">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {message.options.map((option) => (

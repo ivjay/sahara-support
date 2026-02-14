@@ -1,14 +1,12 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
-export type BookingType = 'movie' | 'bus' | 'flight' | 'doctor' | 'salon';
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /**
- * Saves or updates a conversation in Supabase
+ * Save or update conversation in Supabase
  */
 export async function saveConversation(data: {
     conversation_id: string;
@@ -17,27 +15,36 @@ export async function saveConversation(data: {
     language: string;
     collected_details: any;
 }) {
-    const { error } = await supabase
-        .from('conversations')
-        .upsert({
-            conversation_id: data.conversation_id,
-            messages: data.messages,
-            current_stage: data.stage,
-            language: data.language,
-            collected_details: data.collected_details,
-            updated_at: new Date().toISOString()
-        }, {
-            onConflict: 'conversation_id'
-        });
+    try {
+        // ✅ FIX: Match the exact table structure
+        const { error } = await supabase
+            .from('conversations')
+            .upsert({
+                conversation_id: data.conversation_id,
+                messages: data.messages,
+                stage: data.stage,
+                language: data.language,
+                booking_type: null, // ✅ Add this field
+                collected_details: data.collected_details,
+                updated_at: new Date().toISOString() // ✅ Explicitly set updated_at
+            }, {
+                onConflict: 'conversation_id'
+            });
 
-    if (error) {
-        console.error('[Supabase] ✗ Error saving conversation:', error);
+        if (error) {
+            console.error('[Supabase] ✗ Error saving conversation:', error);
+            throw error;
+        }
+
+        console.log('[Supabase] ✓ Conversation saved');
+    } catch (error) {
+        console.error('[Supabase] Save failed:', error);
         throw error;
     }
 }
 
 /**
- * Fetches a single conversation by ID
+ * Get conversation by ID
  */
 export async function getConversation(conversationId: string) {
     const { data, error } = await supabase
@@ -47,65 +54,72 @@ export async function getConversation(conversationId: string) {
         .single();
 
     if (error) {
-        if (error.code === 'PGRST116') return null; // Not found
         console.error('[Supabase] ✗ Error fetching conversation:', error);
-        throw error;
+        return null;
     }
+
     return data;
 }
 
 /**
- * Creates a new booking in Supabase
+ * Create a booking in Supabase
  */
 export async function createBooking(data: {
     booking_id: string;
     booking_type: string;
     details: any;
     total_price: number;
-    status?: string;
-    user_id?: string;
+    status: string;
 }) {
-    const { data: booking, error } = await supabase
-        .from('bookings')
-        .insert({
-            booking_id: data.booking_id,
-            booking_type: data.booking_type,
-            details: data.details,
-            total_price: data.total_price,
-            status: data.status || 'pending',
-            user_id: data.user_id || 'anonymous',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
+    try {
+        const { error } = await supabase
+            .from('bookings')
+            .insert({
+                id: data.booking_id,
+                booking_type: data.booking_type,
+                booking_data: data.details,
+                user_id: null, // ✅ Add user tracking later if needed
+                total_price: data.total_price,
+                status: data.status,
+                created_at: new Date().toISOString()
+            });
 
-    if (error) {
-        console.error('[Supabase] ✗ Error creating booking:', error);
+        if (error) {
+            console.error('[Supabase] ✗ Error creating booking:', error);
+            throw error;
+        }
+
+        console.log('[Supabase] ✓ Booking created:', data.booking_id);
+    } catch (error) {
+        console.error('[Supabase] Booking creation failed:', error);
         throw error;
     }
-    return booking;
 }
 
 /**
  * Updates an existing booking status
  */
 export async function updateBookingStatus(bookingId: string, status: string) {
-    const { data, error } = await supabase
-        .from('bookings')
-        .update({
-            status,
-            updated_at: new Date().toISOString()
-        })
-        .eq('booking_id', bookingId)
-        .select()
-        .single();
+    try {
+        const { data, error } = await supabase
+            .from('bookings')
+            .update({
+                status,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', bookingId)
+            .select()
+            .single();
 
-    if (error) {
-        console.error('[Supabase] ✗ Error updating booking status:', error);
+        if (error) {
+            console.error('[Supabase] ✗ Error updating booking status:', error);
+            throw error;
+        }
+        return data;
+    } catch (error) {
+        console.error('[Supabase] Update failed:', error);
         throw error;
     }
-    return data;
 }
 
 /**
@@ -125,4 +139,14 @@ export async function checkSupabaseConnection() {
     } catch (error: any) {
         return { configured: true, connected: false, error: error.message };
     }
+}
+
+/**
+ * Generate a unique booking ID
+ */
+export function generateBookingId(type: string): string {
+    const prefix = type.substring(0, 2).toUpperCase();
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `${prefix}-${timestamp}-${random}`;
 }

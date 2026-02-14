@@ -30,7 +30,7 @@ import { MovieForm } from "@/components/admin/MovieForm";
 import { cn } from "@/lib/utils";
 
 export default function AdminPage() {
-    const { services, addService, deleteService } = useServices();
+    const { services, addService, deleteService, isLoading } = useServices();
     const [searchQuery, setSearchQuery] = useState("");
     const [activeTab, setActiveTab] = useState("all");
     const [isAddMode, setIsAddMode] = useState(false);
@@ -57,7 +57,7 @@ export default function AdminPage() {
         return matchesSearch && matchesType;
     });
 
-    const handleAddService = () => {
+    const handleAddService = async () => {
     if (!newService.title) {
         alert("Title is required!");
         return;
@@ -82,27 +82,32 @@ export default function AdminPage() {
         });
     }
 
-    addService({
-        id,
-        title: newService.title!,
-        subtitle: newService.subtitle || "Service Provider",
-        type: serviceType,
-        price: Number(newService.price) || 0,
-        currency: newService.currency || "NPR",
-        available: true,
-        details: stringifiedDetails,
-        category: finalCategory
-    });
+    try {
+        await addService({
+            id,
+            title: newService.title!,
+            subtitle: newService.subtitle || "Service Provider",
+            type: serviceType,
+            price: Number(newService.price) || 0,
+            currency: newService.currency || "NPR",
+            available: true,
+            details: stringifiedDetails,
+            category: finalCategory
+        });
 
-    setIsAddMode(false);
-    // Reset
-    setNewService({ 
-        type: "appointment", 
-        currency: "NPR", 
-        available: true, 
-        details: {}, 
-        category: "doctor" 
-    });
+        setIsAddMode(false);
+        // Reset
+        setNewService({
+            type: "appointment",
+            currency: "NPR",
+            available: true,
+            details: {},
+            category: "doctor"
+        });
+    } catch (error) {
+        console.error('[Admin] ✗ Failed to add service:', error);
+        alert('Failed to add service. Please try again.');
+    }
 };
 
     const getIcon = (type: string) => {
@@ -337,10 +342,17 @@ export default function AdminPage() {
                                                             variant="ghost"
                                                             size="icon"
                                                             className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive h-8 w-8 hover:scale-110 transition-all"
-                                                            onClick={(e) => {
+                                                            onClick={async (e) => {
                                                                 e.preventDefault();
                                                                 e.stopPropagation();
-                                                                deleteService(service.id);
+                                                                if (confirm(`Delete ${service.title}?`)) {
+                                                                    try {
+                                                                        await deleteService(service.id);
+                                                                    } catch (error) {
+                                                                        console.error('[Admin] ✗ Delete failed:', error);
+                                                                        alert('Failed to delete service. Please try again.');
+                                                                    }
+                                                                }
                                                             }}
                                                         >
                                                             <Trash2 className="h-4 w-4" />

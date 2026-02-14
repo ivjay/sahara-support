@@ -99,29 +99,32 @@ Respond with ONLY "VALID" or "SUSPICIOUS: [reason]"`;
 }
 
 /**
- * PATCH /api/bookings - Update booking status (for verification)
+ * PATCH /api/bookings - Update booking (for verification or details)
  */
 export async function PATCH(request: Request) {
     try {
-        const { id, status } = await request.json();
+        const body = await request.json();
+        const { id, status } = body;
 
-        if (!id || !status) {
+        if (!id) {
             return NextResponse.json(
-                { error: 'Missing ID or Status' },
+                { error: 'Missing ID' },
                 { status: 400 }
             );
         }
 
-        const validStatuses = ['Confirmed', 'Pending', 'Pending Payment', 'Cancelled', 'Completed'];
-        if (!validStatuses.includes(status)) {
-            return NextResponse.json(
-                { error: 'Invalid status', validStatuses },
-                { status: 400 }
-            );
+        if (status) {
+            const validStatuses = ['Confirmed', 'Pending', 'Pending Payment', 'Cancelled', 'Completed'];
+            if (!validStatuses.includes(status)) {
+                return NextResponse.json(
+                    { error: 'Invalid status', validStatuses },
+                    { status: 400 }
+                );
+            }
         }
 
         // 1. Update local JSON DB
-        const updated = await db.updateStatus(id, status);
+        const updated = await db.update(id, body);
 
         if (!updated) {
             return NextResponse.json(
@@ -131,12 +134,14 @@ export async function PATCH(request: Request) {
         }
 
         // 2. LEGIT LOGIC: Update Supabase if available (Single Source of Truth)
-        try {
-            const { updateBookingStatus } = await import('@/lib/supabase');
-            await updateBookingStatus(id, status.toLowerCase());
-            console.log(`[API] ✓ Supabase booking ${id} updated to ${status}`);
-        } catch (supabaseError) {
-            console.warn('[API] Supabase update failed (non-critical):', supabaseError);
+        if (status) {
+            try {
+                const { updateBookingStatus } = await import('@/lib/supabase');
+                await updateBookingStatus(id, status.toLowerCase());
+                console.log(`[API] ✓ Supabase booking ${id} updated to ${status}`);
+            } catch (supabaseError) {
+                console.warn('[API] Supabase update failed (non-critical):', supabaseError);
+            }
         }
 
         // 3. LEGIT LOGIC: Send confirmation email if approved
@@ -150,7 +155,7 @@ export async function PATCH(request: Request) {
             }
         }
 
-        console.log(`[API] ✓ Booking ${id} updated to ${status}`);
+        console.log(`[API] ✓ Booking ${id} updated`);
         return NextResponse.json(updated);
     } catch (error) {
         console.error('[API] Update failed:', error);
@@ -162,15 +167,27 @@ export async function PATCH(request: Request) {
 }
 
 /**
- * DELETE /api/bookings - Clear all bookings (admin only)
+ * DELETE /api/bookings - Delete a booking or clear all
  */
-export async function DELETE() {
+export async function DELETE(request: Request) {
     try {
-        await fs.writeFile(DB_PATH, JSON.stringify([], null, 2));
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+
+        if (id) {
+            const success = await db.delete(id);
+            if (!success) {
+                return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
+            }
+            console.log(`[API] ✓ Booking ${id} deleted`);
+            return NextResponse.json({ success: true, message: `Booking ${id} deleted` });
+        }
+
+        await db.clear();
         console.log('[API] ✓ All bookings cleared');
         return NextResponse.json({ success: true, message: 'All bookings cleared' });
     } catch (error) {
-        console.error('[API] Failed to clear bookings:', error);
-        return NextResponse.json({ error: 'Failed to clear bookings' }, { status: 500 });
+        console.error('[API] Failed to delete booking(s):', error);
+        return NextResponse.json({ error: 'Failed to delete booking(s)' }, { status: 500 });
     }
 }

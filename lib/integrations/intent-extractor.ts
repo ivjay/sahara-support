@@ -7,7 +7,7 @@
 import { Intent } from '@/lib/chat/types';
 import { chat, extractJSON } from './ollama-service';
 import type { OllamaMessage } from './ollama-service';
-import { SAHARA_SYSTEM_PROMPT, detectLanguage, parseBookingResponse } from '@/lib/chat/system-prompt-v2';
+import { SAHARA_SYSTEM_PROMPT, detectLanguage, parseBookingResponse } from '@/lib/chat/sahara-prompt';
 
 export interface IntentExtractionResult {
     intent: Intent;
@@ -50,8 +50,11 @@ export async function extractIntent(
 
         console.log('[IntentExtractor] Processing message:', userMessage);
 
-        // Get response from Ollama
-        const response = await chat(messages, { temperature: 0.3 }); // Lower temp for more deterministic output
+        // Get response from Ollama (with JSON format for structured extraction)
+        const response = await chat(messages, {
+            temperature: 0.3,  // Lower temp for more deterministic output
+            forceJson: true    // Need structured JSON for intent extraction
+        });
 
         // Extract JSON from response
         const result = extractJSON<IntentExtractionResult>(response.message.content);
