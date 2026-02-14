@@ -148,9 +148,18 @@ sahara-support-system/
 
 ## 📖 Documentation
 
-See [CLAUDE.md](./CLAUDE.md) for detailed architecture documentation.
+### Main Documentation
+- **[CLAUDE.md](./CLAUDE.md)** - Detailed architecture and development guide
+- **[README.md](./README.md)** - This file (Quick start guide)
 
-See [PAYMENT_INTEGRATION_PLAN.md](./PAYMENT_INTEGRATION_PLAN.md) for payment integration details.
+### Additional Documentation (in `/docs` folder)
+- **[SETUP.md](./docs/SETUP.md)** - Complete setup guide for payment integration
+- **[TESTING_GUIDE.md](./docs/TESTING_GUIDE.md)** - Payment testing instructions
+- **[PAYMENT_INTEGRATION_PLAN.md](./docs/PAYMENT_INTEGRATION_PLAN.md)** - Payment roadmap and architecture
+- **[QUICK_REFERENCE.md](./docs/QUICK_REFERENCE.md)** - Quick reference guide
+- **[SAHARA_COMPLETE.md](./docs/SAHARA_COMPLETE.md)** - Complete system overview
+
+> **Note:** The `/docs` folder contains detailed documentation for developers and is not tracked in git.
 
 ## 🧪 Development
 

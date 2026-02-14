@@ -1,5 +1,37 @@
 [
   {
+    "id": "BK-MLM2JRGS",
+    "serviceId": "movie-5",
+    "type": "movie",
+    "title": "Mahajatra",
+    "subtitle": "QFX Civil Mall",
+    "status": "Pending Payment",
+    "amount": "NPR 800",
+    "date": "2026-02-19T00:00:00.000Z",
+    "details": {
+      "serviceId": "movie-5",
+      "serviceType": "movie",
+      "date": "2026-02-19",
+      "time": "18:00",
+      "passengerCount": 2,
+      "passengers": [
+        {
+          "fullName": ""
+        },
+        {
+          "fullName": ""
+        }
+      ],
+      "seats": [
+        "C6",
+        "D6"
+      ],
+      "totalPrice": 800,
+      "currency": "NPR",
+      "paymentMethod": "khalti"
+    }
+  },
+  {
     "id": "BK-MLM2DRGN",
     "serviceId": "movie-5",
     "type": "movie",
