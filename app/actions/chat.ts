@@ -33,6 +33,8 @@ async function getAdminServices(): Promise<BookingOption[]> {
     try {
         const { supabase } = await import("@/lib/supabase");
 
+        console.log('[Chat] Fetching admin services from Supabase...');
+
         // Add a race condition with timeout to fail fast
         const fetchPromise = supabase
             .from('services')
@@ -40,21 +42,25 @@ async function getAdminServices(): Promise<BookingOption[]> {
             .eq('available', true);
 
         const timeoutPromise = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('Supabase timeout')), 2000)
+            setTimeout(() => reject(new Error('Supabase timeout')), 5000)
         );
 
         const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
 
         if (error) {
+            console.error('[Chat] ✗ Supabase error:', error);
             return [];
         }
 
         if (!data || data.length === 0) {
+            console.warn('[Chat] ⚠ No admin services found in Supabase');
             return [];
         }
 
+        console.log(`[Chat] ✓ Fetched ${data.length} admin services from Supabase`);
+
         // ✅ Convert to BookingOption format
-        return data.map((service: any) => ({
+        const services = data.map((service: any) => ({
             id: service.id,
             type: service.type || 'appointment',
             category: service.category,
@@ -66,8 +72,12 @@ async function getAdminServices(): Promise<BookingOption[]> {
             available: service.available !== false,
             qrCodeUrl: service.qrCodeUrl
         })) as BookingOption[];
+
+        console.log('[Chat] ✓ Converted services:', services.map(s => `${s.title} (${s.type}, category: ${s.category})`));
+
+        return services;
     } catch (error) {
-        // Silently fail - just use mock data
+        console.error('[Chat] ✗ Failed to fetch admin services:', error);
         return [];
     }
 }

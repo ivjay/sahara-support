@@ -14,7 +14,37 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET() {
     try {
-        const bookings = await db.getAll();
+        // ✅ FIX: Try Supabase first (production), fall back to file DB
+        let bookings = [];
+
+        try {
+            const { supabase } = await import('@/lib/supabase');
+            const { data, error } = await supabase
+                .from('bookings')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (!error && data) {
+                bookings = data.map((b: any) => ({
+                    id: b.id,
+                    type: b.booking_type,
+                    title: b.booking_data?.title || b.booking_type,
+                    subtitle: b.booking_data?.subtitle || '',
+                    status: b.status.charAt(0).toUpperCase() + b.status.slice(1),
+                    amount: `NPR ${b.total_price}`,
+                    date: new Date(b.created_at),
+                    details: b.booking_data || {}
+                }));
+                console.log(`[API] ✓ Fetched ${bookings.length} bookings from Supabase`);
+                return NextResponse.json(bookings);
+            }
+        } catch (supabaseError) {
+            console.warn('[API] Supabase fetch failed, trying file DB:', supabaseError);
+        }
+
+        // Fallback to file DB
+        bookings = await db.getAll();
+        console.log(`[API] ✓ Fetched ${bookings.length} bookings from file DB`);
         return NextResponse.json(bookings);
     } catch (error) {
         console.error('[API] Failed to fetch bookings:', error);
@@ -82,11 +112,37 @@ Respond with ONLY "VALID" or "SUSPICIOUS: [reason]"`;
             }
         }
 
-        // Create booking
-        const newBooking = await db.create(body);
-        console.log(`[API] ✓ Booking created: ${newBooking.id} - ${newBooking.title}`);
+        let newBooking = body;
 
+        // ✅ FIX: Try Supabase first (production-compatible), fall back to file DB
+        try {
+            const { createBooking } = await import('@/lib/supabase');
 
+            // Parse price from "NPR 1500" format
+            const priceMatch = body.amount.match(/[\d.]+/);
+            const totalPrice = priceMatch ? parseFloat(priceMatch[0]) : 0;
+
+            await createBooking({
+                booking_id: body.id,
+                booking_type: body.type,
+                details: body.details || {},
+                total_price: totalPrice,
+                status: body.status.toLowerCase()
+            });
+
+            console.log(`[API] ✓ Booking created in Supabase: ${body.id}`);
+        } catch (supabaseError) {
+            console.warn('[API] Supabase booking creation failed, trying file DB:', supabaseError);
+
+            // Fallback to file-based DB (only works in development)
+            try {
+                newBooking = await db.create(body);
+                console.log(`[API] ✓ Booking created in file DB: ${newBooking.id}`);
+            } catch (fileError) {
+                console.error('[API] ✗ File DB also failed:', fileError);
+                throw new Error('Both Supabase and file DB failed. Check your database configuration.');
+            }
+        }
 
         return NextResponse.json(newBooking, { status: 201 });
     } catch (error) {
