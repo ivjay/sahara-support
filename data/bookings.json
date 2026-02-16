@@ -1,5 +1,41 @@
 [
   {
+    "id": "BK-MLOT8MVY",
+    "serviceId": "movie-1",
+    "type": "movie",
+    "title": "Kabaddi 5",
+    "subtitle": "QFX Cinemas, Labim Mall",
+    "status": "Confirmed",
+    "amount": "NPR 800",
+    "date": "2026-02-15T00:00:00.000Z",
+    "details": {
+      "serviceId": "movie-1",
+      "serviceType": "movie",
+      "date": "2026-02-15",
+      "time": "18:00",
+      "passengerCount": 2,
+      "passengers": [
+        {
+          "fullName": "Bijay Acharya",
+          "phone": "+977 9841XXXXXX",
+          "email": "bijay.acharya@example.com"
+        },
+        {
+          "fullName": "hh",
+          "phone": "",
+          "email": ""
+        }
+      ],
+      "seats": [
+        "C5",
+        "C6"
+      ],
+      "totalPrice": 800,
+      "currency": "NPR",
+      "paymentMethod": "cash"
+    }
+  },
+  {
     "id": "BK-MLOR32LY",
     "serviceId": "bus-5",
     "type": "bus",

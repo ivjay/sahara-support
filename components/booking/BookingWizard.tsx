@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -39,7 +39,27 @@ export function BookingWizard({
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
     const [selectedTime, setSelectedTime] = useState<string | null>(null);
     const [passengerCount, setPassengerCount] = useState(1);
-    const [passengers, setPassengers] = useState<any[]>([]);
+    const [passengers, setPassengers] = useState<any[]>([
+        { fullName: userProfile?.name || '', phone: userProfile?.phone || '', email: userProfile?.email || '' }
+    ]);
+
+    // Keep passengers array in sync with count
+    useEffect(() => {
+        setPassengers(prev => {
+            if (prev.length === passengerCount) return prev;
+            if (prev.length < passengerCount) {
+                // Grow array
+                const newArr = [...prev];
+                for (let i = prev.length; i < passengerCount; i++) {
+                    newArr.push({ fullName: '', phone: '', email: '' });
+                }
+                return newArr;
+            }
+            // Shrink array
+            return prev.slice(0, passengerCount);
+        });
+    }, [passengerCount]);
+
     const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
     const [totalPrice, setTotalPrice] = useState(selectedService.price || 0);
 
@@ -119,59 +139,68 @@ export function BookingWizard({
                                         setPassengers(newPassengers);
                                     }}
                                     onSeatsChange={setSelectedSeats}
-                                    onReserveSuccess={() => {}}
-                                    onReserveFailure={() => {}}
+                                    onReserveSuccess={() => { }}
+                                    onReserveFailure={() => { }}
                                 />
                             </div>
                         ) : (
-                            <div className="space-y-4">
+                            <div className="space-y-6">
                                 <h3 className="text-sm font-medium mb-3">Enter Your Details</h3>
-                                <div className="space-y-3">
-                                    <div>
-                                        <label className="text-sm font-medium">Full Name <span className="text-destructive">*</span></label>
-                                        <input
-                                            type="text"
-                                            className="w-full mt-1 px-3 py-2 border rounded-lg"
-                                            placeholder="Enter your name"
-                                            defaultValue={userProfile?.name}
-                                            required
-                                            onChange={(e) => {
-                                                const newPassengers = [...passengers];
-                                                newPassengers[0] = { ...newPassengers[0], fullName: e.target.value };
-                                                setPassengers(newPassengers);
-                                            }}
-                                        />
+                                {passengers.slice(0, passengerCount).map((passenger, index) => (
+                                    <div key={index} className="space-y-3 p-4 border rounded-lg bg-muted/30">
+                                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                            Passenger {index + 1} {index === 0 && "(Primary Contact)"}
+                                        </p>
+                                        <div>
+                                            <label className="text-sm font-medium">Full Name <span className="text-destructive">*</span></label>
+                                            <input
+                                                type="text"
+                                                className="w-full mt-1 px-3 py-2 border rounded-lg"
+                                                placeholder="Enter full name"
+                                                value={passenger.fullName || ''}
+                                                required
+                                                onChange={(e) => {
+                                                    const newPassengers = [...passengers];
+                                                    newPassengers[index] = { ...newPassengers[index], fullName: e.target.value };
+                                                    setPassengers(newPassengers);
+                                                }}
+                                            />
+                                        </div>
+                                        {index === 0 && (
+                                            <>
+                                                <div>
+                                                    <label className="text-sm font-medium">Phone <span className="text-destructive">*</span></label>
+                                                    <input
+                                                        type="tel"
+                                                        className="w-full mt-1 px-3 py-2 border rounded-lg"
+                                                        placeholder="Enter phone number"
+                                                        value={passenger.phone || ''}
+                                                        required
+                                                        onChange={(e) => {
+                                                            const newPassengers = [...passengers];
+                                                            newPassengers[index] = { ...newPassengers[index], phone: e.target.value };
+                                                            setPassengers(newPassengers);
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-sm font-medium">Email (Optional)</label>
+                                                    <input
+                                                        type="email"
+                                                        className="w-full mt-1 px-3 py-2 border rounded-lg"
+                                                        placeholder="Enter email"
+                                                        value={passenger.email || ''}
+                                                        onChange={(e) => {
+                                                            const newPassengers = [...passengers];
+                                                            newPassengers[index] = { ...newPassengers[index], email: e.target.value };
+                                                            setPassengers(newPassengers);
+                                                        }}
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
-                                    <div>
-                                        <label className="text-sm font-medium">Phone <span className="text-destructive">*</span></label>
-                                        <input
-                                            type="tel"
-                                            className="w-full mt-1 px-3 py-2 border rounded-lg"
-                                            placeholder="Enter phone number"
-                                            defaultValue={userProfile?.phone}
-                                            required
-                                            onChange={(e) => {
-                                                const newPassengers = [...passengers];
-                                                newPassengers[0] = { ...newPassengers[0], phone: e.target.value };
-                                                setPassengers(newPassengers);
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-sm font-medium">Email (Optional)</label>
-                                        <input
-                                            type="email"
-                                            className="w-full mt-1 px-3 py-2 border rounded-lg"
-                                            placeholder="Enter email"
-                                            defaultValue={userProfile?.email}
-                                            onChange={(e) => {
-                                                const newPassengers = [...passengers];
-                                                newPassengers[0] = { ...newPassengers[0], email: e.target.value };
-                                                setPassengers(newPassengers);
-                                            }}
-                                        />
-                                    </div>
-                                </div>
+                                ))}
                             </div>
                         )}
 
@@ -190,8 +219,11 @@ export function BookingWizard({
                                     setActiveTab("payment");
                                 }}
                                 disabled={needsSeats
-                                    ? selectedSeats.length === 0 || !passengers[0]?.fullName?.trim() || !passengers[0]?.phone?.trim()
-                                    : !passengers[0]?.fullName?.trim() || !passengers[0]?.phone?.trim()
+                                    ? selectedSeats.length < passengerCount ||
+                                    passengers.slice(0, passengerCount).some(p => !p.fullName?.trim()) ||
+                                    !passengers[0]?.phone?.trim()
+                                    : passengers.slice(0, passengerCount).some(p => !p.fullName?.trim()) ||
+                                    !passengers[0]?.phone?.trim()
                                 }
                             >
                                 Next: Payment
@@ -259,7 +291,7 @@ export function BookingWizard({
                             <PaymentStep
                                 totalPrice={totalPrice}
                                 currency="NPR"
-                                onPaymentSelect={() => {}}
+                                onPaymentSelect={() => { }}
                                 onComplete={onComplete}
                                 bookingData={{
                                     serviceId: selectedService.id,

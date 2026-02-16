@@ -71,34 +71,38 @@ export function SeatGrid({ rows, selectedSeats, onSeatClick, venueType }: SeatGr
 
             {/* Seats */}
             <div className="space-y-2">
-            {rows.map((row) => (
-                <div key={row.label} className="flex items-center gap-2">
-                    {/* Row label */}
-                    <div className="w-6 text-center text-sm font-bold text-gray-600">
-                        {row.label}
-                    </div>
+                {rows.map((row) => (
+                    <div key={row.label} className="flex items-center gap-2">
+                        {/* Row label */}
+                        <div className="w-6 text-center text-sm font-bold text-gray-600">
+                            {row.label}
+                        </div>
 
-                    {/* Seats */}
-                    <div className="flex gap-2">
-                        {row.seats.map((seat, idx) => {
-                            if (!seat) {
-                                // Aisle gap
-                                return <div key={`${row.label}-aisle-${idx}`} className="w-10" />;
-                            }
+                        {/* Seats */}
+                        <div className="flex gap-2">
+                            {row.seats.map((seat, idx) => {
+                                if (!seat) {
+                                    // Aisle gap
+                                    return <div key={`${row.label}-aisle-${idx}`} className="w-10" />;
+                                }
 
-                            return (
-                                <Seat
-                                    key={`${row.label}-${seat.label}`}
-                                    label={seat.label}
-                                    status={getSeatStatus(seat.label, seat.status)}
-                                    type={seat.type}
-                                    onClick={() => onSeatClick(seat.label)}
-                                />
-                            );
-                        })}
+                                // Compute label: If seat.label exists use it, otherwise combine row.label + seat.number
+                                // This ensures compatibility with both standard objects and seed data
+                                const seatLabel = (seat as any).label || `${row.label}${(seat as any).number}`;
+
+                                return (
+                                    <Seat
+                                        key={`${row.label}-${seatLabel}`}
+                                        label={seatLabel}
+                                        status={getSeatStatus(seatLabel, seat.status)}
+                                        type={seat.type}
+                                        onClick={() => onSeatClick(seatLabel)}
+                                    />
+                                );
+                            })}
+                        </div>
                     </div>
-                </div>
-            ))}
+                ))}
             </div>
         </div>
     );

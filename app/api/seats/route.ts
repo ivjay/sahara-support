@@ -111,9 +111,12 @@ export async function POST(request: NextRequest) {
         });
 
         if (error) {
-            console.error('[Seats API] Reservation error:', error);
+            console.error('[Seats API] RPC reserve_seats failed:', error);
+            console.error('[Seats API] Payload:', {
+                venueId, serviceId, eventDate, eventTime, seatLabels, sessionId
+            });
             return NextResponse.json(
-                { error: error.message },
+                { error: error.message, details: error.hint || error.details },
                 { status: 500 }
             );
         }
@@ -150,9 +153,8 @@ async function initializeSeatInventory(
     seatConfig.rows.forEach((row: any) => {
         row.seats.forEach((seat: any) => {
             if (seat) {
-                const label = typeof seat.number === 'number'
-                    ? `${row.label}${seat.number}`
-                    : `${row.label}${seat.number}`;
+                // Compute label same as SeatGrid and ConsolidatedSeatSelection
+                const label = seat.label || `${row.label}${seat.number}`;
 
                 seats.push({
                     venue_id: venueId,

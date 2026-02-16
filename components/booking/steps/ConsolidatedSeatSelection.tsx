@@ -172,7 +172,25 @@ export function ConsolidatedSeatSelection({
         );
     }
 
-    const venueRows = venue?.seat_config?.rows || [];
+    // Merge static venue rows with real-time seat inventory
+    const venueRows = (venue?.seat_config?.rows || []).map((row: any) => ({
+        ...row,
+        seats: row.seats.map((seat: any) => {
+            if (!seat) return null;
+
+            // Compute label same as SeatGrid and API
+            const label = seat.label || `${row.label}${seat.number}`;
+
+            // Find matching inventory item
+            const inventoryItem = seatInventory.find(inv => inv.seat_label === label);
+
+            return {
+                ...seat,
+                label,
+                status: inventoryItem?.status || seat.status || 'available'
+            };
+        })
+    }));
 
     return (
         <div className="space-y-6">
