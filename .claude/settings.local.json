@@ -9,7 +9,8 @@
       "Bash(curl *)",
       "WebFetch(domain:lacuna-eta.vercel.app)",
       "Bash(npx shadcn@latest add:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(git commit:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

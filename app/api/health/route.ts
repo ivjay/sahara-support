@@ -70,24 +70,15 @@ export async function GET() {
             .limit(1);
 
         if (error) {
-            health.checks.supabase = {
-                ...health.checks.supabase,
-                connected: false,
-                error: error.message
-            };
+            health.checks.supabase.connected = false;
+            health.checks.supabase.error = error.message;
             health.warnings.push(`Supabase connection failed: ${error.message}`);
         } else {
-            health.checks.supabase = {
-                ...health.checks.supabase,
-                connected: true
-            };
+            health.checks.supabase.connected = true;
         }
     } catch (error: any) {
-        health.checks.supabase = {
-            ...health.checks.supabase,
-            connected: false,
-            error: error.message
-        };
+        health.checks.supabase.connected = false;
+        health.checks.supabase.error = error.message;
         health.warnings.push(`Supabase test failed: ${error.message}`);
     }
 

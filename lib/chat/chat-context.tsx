@@ -26,7 +26,7 @@ const initialState: ChatState = {
     currentBooking: null,
     userId: "demo-user",
     sessions: [],
-    userProfile: null, // Will be populated from Firebase auth
+    userProfile: undefined, // Will be populated from Firebase auth
 };
 
 const STORAGE_KEY = "sahara_chat_history_v1";
@@ -271,7 +271,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
         const hasData = state.messages.length > 0 ||
             state.sessions.length > 0 ||
             state.currentBooking !== null ||
-            state.userProfile !== null;
+            state.userProfile !== undefined;
 
         if (hasData) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
