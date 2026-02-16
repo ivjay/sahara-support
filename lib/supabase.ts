@@ -73,26 +73,46 @@ export async function createBooking(data: {
     status: string;
 }) {
     try {
-        const { error } = await supabase
+        console.log('[Supabase] Creating booking:', {
+            id: data.booking_id,
+            type: data.booking_type,
+            price: data.total_price,
+            status: data.status
+        });
+
+        const bookingData = {
+            id: data.booking_id,
+            booking_type: data.booking_type,
+            booking_data: data.details || {},
+            user_id: null, // ✅ Add user tracking later if needed
+            total_price: data.total_price,
+            status: data.status.toLowerCase(), // Ensure lowercase for consistency
+            created_at: new Date().toISOString()
+        };
+
+        const { data: insertedData, error } = await supabase
             .from('bookings')
-            .insert({
-                id: data.booking_id,
-                booking_type: data.booking_type,
-                booking_data: data.details,
-                user_id: null, // ✅ Add user tracking later if needed
-                total_price: data.total_price,
-                status: data.status,
-                created_at: new Date().toISOString()
-            });
+            .insert(bookingData)
+            .select()
+            .single();
 
         if (error) {
-            console.error('[Supabase] ✗ Error creating booking:', error);
-            throw error;
+            console.error('[Supabase] ✗ Insert error details:', {
+                message: error.message,
+                details: error.details,
+                hint: error.hint,
+                code: error.code
+            });
+            throw new Error(`Supabase error: ${error.message} (${error.code || 'unknown'})`);
         }
 
-        console.log('[Supabase] ✓ Booking created:', data.booking_id);
-    } catch (error) {
-        console.error('[Supabase] Booking creation failed:', error);
+        console.log('[Supabase] ✓ Booking created successfully:', data.booking_id);
+        return insertedData;
+    } catch (error: any) {
+        console.error('[Supabase] Booking creation failed:', {
+            error: error.message,
+            stack: error.stack
+        });
         throw error;
     }
 }

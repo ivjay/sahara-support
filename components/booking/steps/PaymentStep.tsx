@@ -47,6 +47,8 @@ export function PaymentStep({
 
     async function handleCashPayment() {
         setProcessing(true);
+        setError(null); // Clear any previous errors
+
         try {
             const bookingId = `BK-${Date.now().toString(36).toUpperCase()}`;
 
@@ -58,7 +60,7 @@ export function PaymentStep({
                 subtitle: bookingData.serviceSubtitle || '',
                 status: 'Confirmed',
                 amount: `${currency} ${totalPrice}`,
-                date: new Date(bookingData.date),
+                date: bookingData.date, // ✅ Keep as string, don't convert to Date object
                 details: {
                     serviceId: bookingData.serviceId,
                     serviceType: bookingData.serviceType,
@@ -73,22 +75,28 @@ export function PaymentStep({
                 }
             };
 
+            console.log('[PaymentStep] Creating cash booking:', bookingPayload);
+
             const response = await fetch('/api/bookings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(bookingPayload)
             });
 
-            if (!response.ok) throw new Error(`Booking failed: ${response.statusText}`);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: response.statusText }));
+                console.error('[PaymentStep] Booking API error:', errorData);
+                throw new Error(errorData.error || errorData.details || `Booking failed: ${response.statusText}`);
+            }
 
             const result = await response.json();
-            console.log('[PaymentStep] Cash booking created:', result);
+            console.log('[PaymentStep] ✓ Cash booking created:', result);
 
             onPaymentSelect('cash');
             onComplete(result.id || bookingId);
-        } catch (error) {
-            console.error('[PaymentStep] Cash booking failed:', error);
-            setError('Booking failed. Please try again.');
+        } catch (error: any) {
+            console.error('[PaymentStep] ✗ Cash booking failed:', error);
+            setError(error.message || 'Booking failed. Please try again.');
         } finally {
             setProcessing(false);
         }
@@ -96,6 +104,8 @@ export function PaymentStep({
 
     async function handleDigitalPayment(gateway: 'esewa' | 'khalti') {
         setInitiatingPayment(true);
+        setError(null); // Clear any previous errors
+
         try {
             const bookingId = `BK-${Date.now().toString(36).toUpperCase()}`;
 
@@ -108,7 +118,7 @@ export function PaymentStep({
                 subtitle: bookingData.serviceSubtitle || '',
                 status: 'Pending Payment',
                 amount: `${currency} ${totalPrice}`,
-                date: new Date(bookingData.date),
+                date: bookingData.date, // ✅ Keep as string
                 details: {
                     serviceId: bookingData.serviceId,
                     serviceType: bookingData.serviceType,

@@ -122,11 +122,27 @@ ${user.preferences.map(p => `- ${p}`).join('\n')}
 
 /**
  * Get a short greeting for the user
+ * @param userName - Optional user name or Firebase user object
  */
-export function getUserGreeting(): string {
+export function getUserGreeting(userName?: string | { displayName?: string | null; email?: string | null }): string {
     const hour = new Date().getHours();
-    const firstName = CURRENT_USER.firstName;
 
+    let firstName = "there"; // Default generic greeting
+
+    if (userName) {
+        if (typeof userName === 'string') {
+            // Extract first name from full name
+            firstName = userName.split(' ')[0] || "there";
+        } else if (userName.displayName) {
+            // Firebase user object with displayName
+            firstName = userName.displayName.split(' ')[0] || "there";
+        } else if (userName.email) {
+            // Fallback to email username (before @)
+            firstName = userName.email.split('@')[0] || "there";
+        }
+    }
+
+    // Time-based greeting
     if (hour < 12) {
         return `Good morning, ${firstName}!`;
     } else if (hour < 17) {

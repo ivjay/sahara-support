@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/service';
 import fs from 'fs/promises';
 import path from 'path';
-import { complete } from '@/lib/integrations/ollama-service';
 
 
 const DB_PATH = path.join(process.cwd(), 'data', 'bookings.json');
@@ -84,33 +83,8 @@ export async function POST(request: Request) {
             }, { status: 400 });
         }
 
-        // Use Ollama for intelligent booking validation (if available)
-        if (process.env.OLLAMA_BASE_URL) {
-            try {
-                const validationPrompt = `Validate this booking request and check for potential issues:
-Type: ${body.type}
-Service: ${body.title} - ${body.subtitle || 'N/A'}
-Amount: ${body.amount}
-Date: ${body.date ? new Date(body.date).toLocaleDateString() : 'Not specified'}
-
-Check for:
-1. Reasonable pricing for ${body.type} in Kathmandu Valley
-2. Valid service type
-3. Suspicious or fraudulent patterns
-
-Respond with ONLY "VALID" or "SUSPICIOUS: [reason]"`;
-
-                const aiValidation = await complete(validationPrompt, undefined, { temperature: 0.2 });
-
-                if (aiValidation.includes('SUSPICIOUS')) {
-                    console.warn(`[API] AI flagged suspicious booking: ${aiValidation}`);
-                    // Log but don't block - could add admin review step here
-                }
-            } catch (ollamaError) {
-                console.warn('[API] Ollama validation unavailable:', ollamaError);
-                // Continue without AI validation
-            }
-        }
+        // ✅ REMOVED: Ollama validation was causing timeouts and blocking bookings
+        // Bookings should be fast and reliable - no AI validation needed
 
         let newBooking = body;
 
@@ -122,34 +96,61 @@ Respond with ONLY "VALID" or "SUSPICIOUS: [reason]"`;
             const priceMatch = body.amount.match(/[\d.]+/);
             const totalPrice = priceMatch ? parseFloat(priceMatch[0]) : 0;
 
-            await createBooking({
+            console.log('[API] Attempting Supabase booking creation:', {
+                id: body.id,
+                type: body.type,
+                price: totalPrice,
+                status: body.status,
+                hasDetails: !!body.details
+            });
+
+            const supabaseBooking = await createBooking({
                 booking_id: body.id,
                 booking_type: body.type,
                 details: body.details || {},
                 total_price: totalPrice,
-                status: body.status.toLowerCase()
+                status: body.status
             });
 
             console.log(`[API] ✓ Booking created in Supabase: ${body.id}`);
-        } catch (supabaseError) {
-            console.warn('[API] Supabase booking creation failed, trying file DB:', supabaseError);
+            newBooking = supabaseBooking || body;
+        } catch (supabaseError: any) {
+            console.error('[API] ✗ Supabase booking creation failed:', {
+                error: supabaseError.message,
+                stack: supabaseError.stack
+            });
 
             // Fallback to file-based DB (only works in development)
             try {
+                console.log('[API] Attempting file DB fallback...');
                 newBooking = await db.create(body);
                 console.log(`[API] ✓ Booking created in file DB: ${newBooking.id}`);
-            } catch (fileError) {
-                console.error('[API] ✗ File DB also failed:', fileError);
-                throw new Error('Both Supabase and file DB failed. Check your database configuration.');
+            } catch (fileError: any) {
+                console.error('[API] ✗ File DB also failed:', {
+                    error: fileError.message,
+                    stack: fileError.stack
+                });
+
+                // Return detailed error for debugging
+                return NextResponse.json({
+                    error: 'Booking creation failed',
+                    supabaseError: supabaseError.message,
+                    fileDbError: fileError.message,
+                    details: 'Both Supabase and file DB failed. Check database configuration and logs.'
+                }, { status: 500 });
             }
         }
 
         return NextResponse.json(newBooking, { status: 201 });
-    } catch (error) {
-        console.error('[API] Failed to create booking:', error);
+    } catch (error: any) {
+        console.error('[API] Fatal error creating booking:', {
+            error: error.message,
+            stack: error.stack
+        });
         return NextResponse.json({
             error: 'Failed to create booking',
-            message: error instanceof Error ? error.message : 'Unknown error'
+            message: error.message || 'Unknown error',
+            details: error.stack
         }, { status: 500 });
     }
 }

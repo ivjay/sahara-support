@@ -146,20 +146,9 @@ sahara-support-system/
 - **Payments**: eSewa, Khalti APIs
 - **State Management**: React useReducer, Context API
 
-## 📖 Documentation
+## 📖 Architecture
 
-### Main Documentation
-- **[CLAUDE.md](./CLAUDE.md)** - Detailed architecture and development guide
-- **[README.md](./README.md)** - This file (Quick start guide)
-
-### Additional Documentation (in `/docs` folder)
-- **[SETUP.md](./docs/SETUP.md)** - Complete setup guide for payment integration
-- **[TESTING_GUIDE.md](./docs/TESTING_GUIDE.md)** - Payment testing instructions
-- **[PAYMENT_INTEGRATION_PLAN.md](./docs/PAYMENT_INTEGRATION_PLAN.md)** - Payment roadmap and architecture
-- **[QUICK_REFERENCE.md](./docs/QUICK_REFERENCE.md)** - Quick reference guide
-- **[SAHARA_COMPLETE.md](./docs/SAHARA_COMPLETE.md)** - Complete system overview
-
-> **Note:** The `/docs` folder contains detailed documentation for developers and is not tracked in git.
+The system uses a conversational AI agent powered by Ollama for natural language booking. All bookings are stored in Supabase with real-time seat availability tracking. Payment processing is handled through eSewa and Khalti APIs with automatic verification and confirmation.
 
 ## 🧪 Development
 

@@ -32,66 +32,121 @@ export function Receipt({ data }: ReceiptProps) {
     const [isSharing, setIsSharing] = useState(false);
 
     const captureReceipt = async (): Promise<Blob | null> => {
-        if (!receiptRef.current) return null;
-        const canvas = await html2canvas(receiptRef.current, {
-            backgroundColor: "#ffffff",
-            scale: 2,
-            useCORS: true,
-            logging: false,
-        });
-        return new Promise((resolve) => {
-            canvas.toBlob((blob) => resolve(blob), "image/png", 1.0);
-        });
+        if (!receiptRef.current) {
+            console.error("[Receipt] Receipt element not found");
+            return null;
+        }
+
+        try {
+            console.log("[Receipt] Capturing receipt...");
+            const canvas = await html2canvas(receiptRef.current, {
+                backgroundColor: "#ffffff",
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                allowTaint: true,
+            });
+
+            return new Promise((resolve, reject) => {
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        console.log("[Receipt] ✓ Receipt captured successfully");
+                        resolve(blob);
+                    } else {
+                        console.error("[Receipt] Failed to create blob");
+                        reject(new Error("Failed to create image blob"));
+                    }
+                }, "image/png", 1.0);
+            });
+        } catch (error) {
+            console.error("[Receipt] html2canvas error:", error);
+            return null;
+        }
     };
 
     const handleDownload = async () => {
         setIsSaving(true);
         try {
+            console.log("[Receipt] Starting download...");
             const blob = await captureReceipt();
-            if (!blob) return;
+
+            if (!blob) {
+                console.error("[Receipt] Blob is null");
+                alert("❌ Failed to capture receipt. Please try again or take a screenshot.");
+                setIsSaving(false);
+                return;
+            }
+
+            console.log("[Receipt] Blob created, size:", blob.size);
+
+            // Create download link
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
             link.download = `sahara-receipt-${data.id}.png`;
+
+            // Force download by clicking the link
             document.body.appendChild(link);
+            console.log("[Receipt] Triggering download...");
             link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+
+            // Cleanup after a short delay to ensure download started
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                console.log("✅ Receipt download triggered successfully!");
+            }, 100);
+
         } catch (err) {
             console.error("[Receipt] Download failed:", err);
+            alert("❌ Download failed. Please try again or take a screenshot.");
         } finally {
-            setIsSaving(false);
+            // Set saving to false after a brief delay
+            setTimeout(() => setIsSaving(false), 500);
         }
     };
 
     const handleShare = async () => {
         setIsSharing(true);
         try {
-            const blob = await captureReceipt();
-            if (!blob) return;
+            // Try Web Share API first (works on mobile)
+            if (navigator.share) {
+                const blob = await captureReceipt();
 
-            const file = new File([blob], `sahara-receipt-${data.id}.png`, { type: "image/png" });
+                // Try sharing with image file if supported
+                if (blob && navigator.canShare?.({ files: [new File([blob], "receipt.png", { type: "image/png" })] })) {
+                    const file = new File([blob], `sahara-receipt-${data.id}.png`, { type: "image/png" });
+                    await navigator.share({
+                        title: `Sahara Booking Receipt - ${data.id}`,
+                        text: `Booking: ${data.serviceName}\nDate: ${data.date} ${data.time}\nAmount: ${data.price}`,
+                        files: [file],
+                    });
+                    console.log("✅ Receipt shared with image!");
+                    setIsSharing(false);
+                    return;
+                }
 
-            if (navigator.share && navigator.canShare?.({ files: [file] })) {
+                // Fallback to text-only share
                 await navigator.share({
                     title: `Sahara Booking Receipt - ${data.id}`,
-                    text: `Booking: ${data.serviceName}\nDate: ${data.date} ${data.time}\nAmount: ${data.price}`,
-                    files: [file],
+                    text: `🎫 Sahara Booking Receipt\n\n📋 ID: ${data.id}\n🏢 Service: ${data.serviceName}\n📍 Location: ${data.location}\n📅 Date: ${data.date}\n🕐 Time: ${data.time}\n💰 Amount: ${data.price}\n✅ Status: ${data.status}\n👤 Customer: ${data.userName}\n📞 Contact: ${data.userPhone}`,
                 });
-            } else if (navigator.share) {
-                await navigator.share({
-                    title: `Sahara Booking Receipt - ${data.id}`,
-                    text: `Booking: ${data.serviceName}\nLocation: ${data.location}\nDate: ${data.date} ${data.time}\nAmount: ${data.price}\nStatus: ${data.status}`,
-                });
-            } else {
-                // Fallback: copy receipt text to clipboard
-                const text = `Sahara Booking Receipt\nID: ${data.id}\nService: ${data.serviceName}\nLocation: ${data.location}\nDate: ${data.date} ${data.time}\nAmount: ${data.price}\nStatus: ${data.status}\nCustomer: ${data.userName}`;
-                await navigator.clipboard.writeText(text);
-                alert("Receipt details copied to clipboard!");
+                console.log("✅ Receipt shared as text!");
+                setIsSharing(false);
+                return;
             }
+
+            // Fallback: Copy to clipboard
+            const text = `🎫 Sahara Booking Receipt\n\n📋 Booking ID: ${data.id}\n🏢 Service: ${data.serviceName}\n📍 Location: ${data.location}\n📅 Date: ${data.date}\n🕐 Time: ${data.time}\n💰 Amount: ${data.price}\n✅ Status: ${data.status}\n👤 Customer: ${data.userName}\n📞 Contact: ${data.userPhone}\n\n🌐 Generated via Sahara Support System`;
+            await navigator.clipboard.writeText(text);
+            alert("✅ Receipt details copied to clipboard!\n\nYou can now paste it in any app.");
+            console.log("✅ Receipt copied to clipboard!");
         } catch (err: any) {
-            if (err?.name !== "AbortError") {
+            if (err?.name === "AbortError") {
+                console.log("ℹ️ User cancelled share");
+            } else {
                 console.error("[Receipt] Share failed:", err);
+                alert("❌ Share failed. Please try taking a screenshot instead.");
             }
         } finally {
             setIsSharing(false);

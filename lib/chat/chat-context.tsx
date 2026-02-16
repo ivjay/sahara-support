@@ -17,6 +17,7 @@ import {
 } from "./types";
 import { generateId } from "./utils";
 import { CURRENT_USER, UserProfile } from "@/lib/user-context";
+import { useAuth } from "@/lib/auth-context";
 
 // Initial state
 const initialState: ChatState = {
@@ -25,14 +26,20 @@ const initialState: ChatState = {
     currentBooking: null,
     userId: "demo-user",
     sessions: [],
-    userProfile: CURRENT_USER,
+    userProfile: null, // Will be populated from Firebase auth
 };
 
 const STORAGE_KEY = "sahara_chat_history_v1";
 
 // Reducer function
-function chatReducer(state: ChatState, action: ChatAction | { type: "REHYDRATE", payload: ChatState }): ChatState {
+function chatReducer(state: ChatState, action: ChatAction | { type: "REHYDRATE", payload: ChatState } | { type: "UPDATE_PROFILE", payload: UserProfile }): ChatState {
     switch (action.type) {
+        case "UPDATE_PROFILE":
+            return {
+                ...state,
+                userProfile: action.payload
+            };
+
         case "REHYDRATE":
             return action.payload;
 
@@ -162,6 +169,72 @@ interface ChatProviderProps {
 
 export function ChatProvider({ children }: ChatProviderProps) {
     const [state, dispatch] = useReducer(chatReducer, initialState);
+    const { user, isGuest } = useAuth();
+
+    // Update user profile when Firebase user changes
+    useEffect(() => {
+        if (user && !isGuest) {
+            // ✅ FIX: Create profile from Firebase auth data only, no hardcoded defaults
+            const userName = user.displayName || user.email?.split('@')[0] || "User";
+            const firstName = user.displayName?.split(' ')[0] || user.email?.split('@')[0] || "there";
+
+            const userProfile: UserProfile = {
+                // Identity from Firebase
+                id: user.uid,
+                name: userName,
+                firstName: firstName,
+                email: user.email || "",
+                phone: user.phoneNumber || "",
+                avatarInitials: userName.substring(0, 2).toUpperCase(),
+
+                // Generic defaults (not Bijay's data!)
+                alternatePhone: "",
+                dateOfBirth: "",
+                gender: "",
+                nationality: "",
+                idNumber: "",
+                currentAddress: "",
+                permanentAddress: "",
+                city: "Kathmandu",
+                postalCode: "",
+                emergencyName: "",
+                emergencyPhone: "",
+                emergencyRelation: "",
+                kycStatus: "Not Started",
+                accountType: "Free",
+                memberSince: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+                preferences: []
+            };
+            dispatch({ type: "UPDATE_PROFILE", payload: userProfile });
+        } else if (isGuest) {
+            // Guest mode - use generic profile
+            const guestProfile: UserProfile = {
+                id: "guest",
+                name: "Guest",
+                firstName: "Guest",
+                email: "",
+                phone: "",
+                alternatePhone: "",
+                avatarInitials: "G",
+                dateOfBirth: "",
+                gender: "",
+                nationality: "",
+                idNumber: "",
+                currentAddress: "",
+                permanentAddress: "",
+                city: "Kathmandu",
+                postalCode: "",
+                emergencyName: "",
+                emergencyPhone: "",
+                emergencyRelation: "",
+                kycStatus: "Not Started",
+                accountType: "Free",
+                memberSince: "Guest",
+                preferences: []
+            };
+            dispatch({ type: "UPDATE_PROFILE", payload: guestProfile });
+        }
+    }, [user, isGuest]);
 
     // Load from localStorage on mount
     useEffect(() => {
@@ -184,10 +257,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
                     }))
                 }));
 
-                // Ensure profile exists (migration for old saves)
-                if (!parsed.userProfile) {
-                    parsed.userProfile = CURRENT_USER;
-                }
+                // Don't restore userProfile from localStorage - it will be set from Firebase auth
 
                 dispatch({ type: "REHYDRATE", payload: parsed });
             } catch (e) {
@@ -201,7 +271,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
         const hasData = state.messages.length > 0 ||
             state.sessions.length > 0 ||
             state.currentBooking !== null ||
-            (state.userProfile && state.userProfile.name !== "Bijay Acharya"); // Simple check for now, or just always save
+            state.userProfile !== null;
 
         if (hasData) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));

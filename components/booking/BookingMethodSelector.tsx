@@ -20,8 +20,6 @@ export function BookingMethodSelector({
     onSelectWizard,
     onCancel
 }: BookingMethodSelectorProps) {
-    const [selectedMethod, setSelectedMethod] = useState<'chat' | 'wizard' | null>(null);
-
     const features = {
         chat: [
             { icon: MessageSquare, text: "Natural conversation" },
@@ -35,12 +33,12 @@ export function BookingMethodSelector({
         ]
     };
 
-    const handleContinue = () => {
-        if (selectedMethod === 'chat') {
-            onSelectChat();
-        } else if (selectedMethod === 'wizard') {
-            onSelectWizard();
-        }
+    const handleSelectChat = () => {
+        onSelectChat();
+    };
+
+    const handleSelectWizard = () => {
+        onSelectWizard();
     };
 
     return (
@@ -70,17 +68,11 @@ export function BookingMethodSelector({
                             {/* Chat Option */}
                             <div className="transition-transform hover:scale-[1.02] active:scale-[0.98]">
                                 <Card
-                                    onClick={() => setSelectedMethod('chat')}
-                                    className={`p-6 cursor-pointer transition-all border-2 ${
-                                        selectedMethod === 'chat'
-                                            ? 'border-primary bg-primary/5 shadow-lg'
-                                            : 'border-gray-200 hover:border-primary/50 hover:shadow-md'
-                                    }`}
+                                    onClick={handleSelectChat}
+                                    className="p-6 cursor-pointer transition-all border-2 border-gray-200 hover:border-primary hover:shadow-lg hover:bg-primary/5"
                                 >
                                     <div className="flex items-start gap-3 mb-4">
-                                        <div className={`p-3 rounded-xl ${
-                                            selectedMethod === 'chat' ? 'bg-primary text-white' : 'bg-gray-100'
-                                        }`}>
+                                        <div className="p-3 rounded-xl bg-gray-100 hover:bg-primary hover:text-white transition-colors">
                                             <MessageSquare className="w-6 h-6" />
                                         </div>
                                         <div className="flex-1">
@@ -89,11 +81,6 @@ export function BookingMethodSelector({
                                                 I'll guide you through questions
                                             </p>
                                         </div>
-                                        {selectedMethod === 'chat' && (
-                                            <div className="text-primary animate-in zoom-in duration-200">
-                                                <CheckCircle className="w-6 h-6" />
-                                            </div>
-                                        )}
                                     </div>
 
                                     {/* Features */}
@@ -125,17 +112,11 @@ export function BookingMethodSelector({
                             {/* Wizard Option */}
                             <div className="transition-transform hover:scale-[1.02] active:scale-[0.98]">
                                 <Card
-                                    onClick={() => setSelectedMethod('wizard')}
-                                    className={`p-6 cursor-pointer transition-all border-2 ${
-                                        selectedMethod === 'wizard'
-                                            ? 'border-primary bg-primary/5 shadow-lg'
-                                            : 'border-gray-200 hover:border-primary/50 hover:shadow-md'
-                                    }`}
+                                    onClick={handleSelectWizard}
+                                    className="p-6 cursor-pointer transition-all border-2 border-gray-200 hover:border-primary hover:shadow-lg hover:bg-primary/5"
                                 >
                                     <div className="flex items-start gap-3 mb-4">
-                                        <div className={`p-3 rounded-xl ${
-                                            selectedMethod === 'wizard' ? 'bg-primary text-white' : 'bg-gray-100'
-                                        }`}>
+                                        <div className="p-3 rounded-xl bg-gray-100 hover:bg-primary hover:text-white transition-colors">
                                             <Wand2 className="w-6 h-6" />
                                         </div>
                                         <div className="flex-1">
@@ -149,11 +130,6 @@ export function BookingMethodSelector({
                                                 Visual form with live seat map
                                             </p>
                                         </div>
-                                        {selectedMethod === 'wizard' && (
-                                            <div className="text-primary animate-in zoom-in duration-200">
-                                                <CheckCircle className="w-6 h-6" />
-                                            </div>
-                                        )}
                                     </div>
 
                                     {/* Features */}
@@ -190,28 +166,9 @@ export function BookingMethodSelector({
                             </div>
                         </div>
 
-                        {/* Continue Button */}
-                        <div className="flex gap-3">
-                            <Button
-                                variant="outline"
-                                onClick={onCancel}
-                                className="flex-1"
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                onClick={handleContinue}
-                                disabled={!selectedMethod}
-                                className="flex-1"
-                                size="lg"
-                            >
-                                {selectedMethod === 'chat' ? 'Start Chatting' : selectedMethod === 'wizard' ? 'Open Wizard' : 'Select an Option'}
-                            </Button>
-                        </div>
-
                         {/* Helper Text */}
-                        <p className="text-center text-xs text-gray-500 mt-4">
-                            💡 You can switch between methods anytime
+                        <p className="text-center text-sm text-gray-600 mt-4">
+                            💡 Click any option to proceed • You can switch between methods anytime
                         </p>
                     </Card>
             </div>
