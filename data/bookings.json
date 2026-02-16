@@ -1,5 +1,33 @@
 [
   {
+    "id": "BK-MLOUL1VG",
+    "serviceId": "apt-psy-2",
+    "type": "appointment",
+    "title": "Dr. Binod Maharjan",
+    "subtitle": "Psychologist - Cognitive Therapy",
+    "status": "Confirmed",
+    "amount": "NPR 1200",
+    "date": "2026-02-15T00:00:00.000Z",
+    "details": {
+      "serviceId": "apt-psy-2",
+      "serviceType": "appointment",
+      "date": "2026-02-15",
+      "time": "10:00",
+      "passengerCount": 1,
+      "passengers": [
+        {
+          "fullName": "Bijay Acharya",
+          "phone": "+977 9841XXXXXX",
+          "email": "bijay.acharya@example.com"
+        }
+      ],
+      "seats": [],
+      "totalPrice": 1200,
+      "currency": "NPR",
+      "paymentMethod": "cash"
+    }
+  },
+  {
     "id": "BK-MLOT8MVY",
     "serviceId": "movie-1",
     "type": "movie",

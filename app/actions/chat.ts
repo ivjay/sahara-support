@@ -90,7 +90,10 @@ async function getRelevantServices(userMessage: string, history: Array<{ role: s
     // ✅ FIX: Fetch and merge admin services
     const adminServices = await getAdminServices();
 
-    console.log(`[Chat] Found ${mockServices.length} mock services + ${adminServices.length} admin services`);
+    console.log(`[Chat] ✓ Found ${mockServices.length} mock services + ${adminServices.length} admin services`);
+    if (adminServices.length > 0) {
+        console.log('[Chat] ✓ Admin services:', adminServices.map(s => `${s.title} (${s.type})`).join(', '));
+    }
 
     return [...mockServices, ...adminServices];
 }

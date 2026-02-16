@@ -117,6 +117,11 @@ export async function processMessage(
 
     // 🛡️ SAFETY NET: Force show_options if LLM forgot
     const msg = userMessage.toLowerCase();
+
+    // Check conversation history for specialty mentions (context-aware)
+    const recentHistory = history.slice(-3).map(m => m.content).join(' ').toLowerCase();
+    const fullContext = msg + ' ' + recentHistory;
+
     if (!showOptions || showOptions === undefined) {
         // Check for general service requests first
         if (msg.includes('what services') || msg.includes('show services') || msg.includes('what options') ||
@@ -128,20 +133,79 @@ export async function processMessage(
             optionType = "doctor";
             filterCategory = null; // Show all doctors
         }
-        // Check for specific service keywords
-        else if (msg.includes('therapy') || msg.includes('psychologist') || msg.includes('therapist') ||
-                 msg.includes('counseling') || msg.includes('anxious') || msg.includes('anxiety') ||
-                 msg.includes('mental health') || msg.includes('depression')) {
+        // Check for specific service keywords (use fullContext for context-awareness)
+        else if (fullContext.includes('therapy') || fullContext.includes('psychologist') || fullContext.includes('therapist') ||
+                 fullContext.includes('counseling') || fullContext.includes('anxious') || fullContext.includes('anxiety') ||
+                 fullContext.includes('mental health') || fullContext.includes('depression')) {
             console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for therapy request");
             showOptions = true;
             optionType = "doctor";
             filterCategory = "psychologist";
-        } else if (msg.includes('pediatrician') || msg.includes('child doctor') || msg.includes('baby doctor') ||
-                   msg.includes('child') && msg.includes('doctor')) {
+        } else if (fullContext.includes('pediatrician') || fullContext.includes('child doctor') || fullContext.includes('baby doctor') ||
+                   fullContext.includes('child') && fullContext.includes('doctor')) {
             console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for pediatrician request");
             showOptions = true;
             optionType = "doctor";
             filterCategory = "pediatrician";
+        } else if (fullContext.includes('heart') || fullContext.includes('cardio') || fullContext.includes('chest pain') ||
+                   fullContext.includes('blood pressure') || fullContext.includes('cardiac')) {
+            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for cardiologist request");
+            showOptions = true;
+            optionType = "doctor";
+            filterCategory = "cardiologist";
+        } else if (fullContext.includes('bone') || fullContext.includes('ortho') || fullContext.includes('fracture') ||
+                   fullContext.includes('joint') || fullContext.includes('spine') || fullContext.includes('back pain')) {
+            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for orthopedic request");
+            showOptions = true;
+            optionType = "doctor";
+            filterCategory = "orthopedic";
+        } else if (fullContext.includes('skin') || fullContext.includes('derma') || fullContext.includes('acne') ||
+                   fullContext.includes('rash') || fullContext.includes('hair fall')) {
+            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for dermatologist request");
+            showOptions = true;
+            optionType = "doctor";
+            filterCategory = "dermatologist";
+        } else if (fullContext.includes('surgery') || fullContext.includes('surgeon') || fullContext.includes('operation')) {
+            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for surgeon request");
+            showOptions = true;
+            optionType = "doctor";
+            filterCategory = "surgeon";
+        } else if (fullContext.includes('kidney') || fullContext.includes('nephro') || fullContext.includes('renal') ||
+                   fullContext.includes('urinary')) {
+            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for nephrologist request");
+            showOptions = true;
+            optionType = "doctor";
+            filterCategory = "nephrologist";
+        } else if (fullContext.includes('gynec') || fullContext.includes('pregnancy') || fullContext.includes('women') && fullContext.includes('doctor')) {
+            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for gynecologist request");
+            showOptions = true;
+            optionType = "doctor";
+            filterCategory = "gynecologist";
+        } else if (fullContext.includes('teeth') || fullContext.includes('dental') || fullContext.includes('dentist') || fullContext.includes('tooth')) {
+            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for dentist request");
+            showOptions = true;
+            optionType = "doctor";
+            filterCategory = "dentist";
+        } else if (fullContext.includes('eye') || fullContext.includes('vision') || fullContext.includes('ophtha')) {
+            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for ophthalmologist request");
+            showOptions = true;
+            optionType = "doctor";
+            filterCategory = "ophthalmologist";
+        } else if (fullContext.includes('ear') || fullContext.includes('nose') || fullContext.includes('throat') || fullContext.includes('ent')) {
+            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for ENT request");
+            showOptions = true;
+            optionType = "doctor";
+            filterCategory = "ent";
+        } else if (fullContext.includes('neuro') || fullContext.includes('brain') || fullContext.includes('migraine') || fullContext.includes('seizure')) {
+            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for neurologist request");
+            showOptions = true;
+            optionType = "doctor";
+            filterCategory = "neurologist";
+        } else if (fullContext.includes('general physician') || fullContext.includes('family doctor') || fullContext.includes('gp')) {
+            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for general physician request");
+            showOptions = true;
+            optionType = "doctor";
+            filterCategory = "general";
         } else if (msg.includes('doctor') || msg.includes('appointment') ||
                    (msg.includes('visit') || msg.includes('see')) && (msg.includes('hospital') || msg.includes('clinic'))) {
             console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for doctor request");

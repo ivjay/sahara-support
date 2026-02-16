@@ -15,17 +15,23 @@ export function getOptionsByType(
 
     const optionsMap = new Map<string, BookingOption>();
 
-    [
-        ...MOCK_BUS_OPTIONS,
-        ...MOCK_FLIGHT_OPTIONS,
-        ...MOCK_APPOINTMENT_OPTIONS,
-        ...MOCK_MOVIE_OPTIONS,
-        ...MOCK_PAYMENT_OPTIONS
-    ].forEach(opt => optionsMap.set(opt.id, opt));
-
-    allServices.forEach(opt => optionsMap.set(opt.id, opt));
+    // ✅ FIX: Only use allServices (which already contains mocks + admin services)
+    // Don't reload mock data here - it's already in allServices
+    if (allServices.length > 0) {
+        allServices.forEach(opt => optionsMap.set(opt.id, opt));
+    } else {
+        // Fallback: If no services passed, use mocks
+        [
+            ...MOCK_BUS_OPTIONS,
+            ...MOCK_FLIGHT_OPTIONS,
+            ...MOCK_APPOINTMENT_OPTIONS,
+            ...MOCK_MOVIE_OPTIONS,
+            ...MOCK_PAYMENT_OPTIONS
+        ].forEach(opt => optionsMap.set(opt.id, opt));
+    }
 
     let validOptions = Array.from(optionsMap.values());
+    console.log(`[OptionHelper] Filtering ${validOptions.length} total services for type: ${type}`);
 
     if (type === "BUS_BOOKING") {
         validOptions = validOptions.filter(o => o.type === 'bus');
@@ -33,13 +39,13 @@ export function getOptionsByType(
         validOptions = validOptions.filter(o => o.type === 'flight');
     } else if (type === "MOVIE_BOOKING") {
         validOptions = validOptions.filter(o => o.type === 'movie');
-        
+
         // Filter by specific movie if requested
         if (filterCategory) {
-            const exactMovie = validOptions.find(o => 
+            const exactMovie = validOptions.find(o =>
                 o.title.toLowerCase().includes(filterCategory.toLowerCase())
             );
-            
+
             if (exactMovie) {
                 console.log(`[Filter] Showing only: ${exactMovie.title}`);
                 return [exactMovie];
@@ -47,9 +53,12 @@ export function getOptionsByType(
         }
     } else if (type === "APPOINTMENT") {
         validOptions = validOptions.filter(o => o.type === 'appointment');
+        console.log(`[OptionHelper] ✓ Found ${validOptions.length} appointments after type filter`);
     } else if (type === "PAYMENT") {
         validOptions = validOptions.filter(o => o.type === 'payment_qr' || o.type === 'payment_cash');
     }
+
+    console.log(`[OptionHelper] After type filter: ${validOptions.length} services`);
 
     // Doctor/service filtering
     if (filterCategory && type === "APPOINTMENT") {
@@ -118,5 +127,7 @@ export function getOptionsByType(
         }
     }
 
-    return validOptions.slice(0, 5);
+    const finalOptions = validOptions.slice(0, 5);
+    console.log(`[OptionHelper] ✓ Returning ${finalOptions.length} options:`, finalOptions.map(o => o.title));
+    return finalOptions;
 }
