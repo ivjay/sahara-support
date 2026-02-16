@@ -4,10 +4,12 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Users, CreditCard } from "lucide-react";
+import { Calendar, Users, CreditCard, LogIn } from "lucide-react";
 import { DateTimePicker } from "./steps/DateTimePicker";
 import { ConsolidatedSeatSelection } from "./steps/ConsolidatedSeatSelection";
 import { PaymentStep } from "./steps/PaymentStep";
+import { useAuth } from "@/lib/auth-context";
+import Link from "next/link";
 
 interface BookingWizardProps {
     serviceType: 'movie' | 'bus' | 'flight' | 'appointment';
@@ -30,6 +32,7 @@ export function BookingWizard({
     onCancel,
     userProfile
 }: BookingWizardProps) {
+    const { user, isGuest } = useAuth();
     const [activeTab, setActiveTab] = useState("schedule");
 
     // Basic state
@@ -193,8 +196,25 @@ export function BookingWizard({
 
                     {/* Payment Tab */}
                     <TabsContent value="payment" className="space-y-4 mt-6">
-                        {/* Booking Summary */}
-                        <Card className="p-4 bg-muted/50">
+                        {/* Guest Login Gate */}
+                        {!user && (
+                            <Card className="p-6 border-2 border-primary/20 bg-primary/5 text-center">
+                                <LogIn className="h-10 w-10 text-primary mx-auto mb-3" />
+                                <h3 className="font-bold text-lg mb-2">Sign in to Confirm Booking</h3>
+                                <p className="text-sm text-muted-foreground mb-4">
+                                    Create an account or sign in to complete your booking and manage your reservations.
+                                </p>
+                                <Link href="/">
+                                    <Button className="gap-2">
+                                        <LogIn className="h-4 w-4" />
+                                        Sign In / Create Account
+                                    </Button>
+                                </Link>
+                            </Card>
+                        )}
+
+                        {/* Booking Summary - only show when authenticated */}
+                        {user && <Card className="p-4 bg-muted/50">
                             <h3 className="text-sm font-semibold mb-3">Booking Summary</h3>
                             <div className="space-y-2 text-sm">
                                 <div className="flex justify-between">
@@ -226,10 +246,10 @@ export function BookingWizard({
                                     <span className="font-bold text-lg text-primary">NPR {totalPrice}</span>
                                 </div>
                             </div>
-                        </Card>
+                        </Card>}
 
                         {/* Payment Options */}
-                        <div>
+                        {user && <div>
                             <h3 className="text-sm font-medium mb-3">Select Payment Method</h3>
                             <PaymentStep
                                 totalPrice={totalPrice}
@@ -247,7 +267,7 @@ export function BookingWizard({
                                     seats: selectedSeats
                                 }}
                             />
-                        </div>
+                        </div>}
 
                         <div className="flex justify-start pt-4">
                             <Button

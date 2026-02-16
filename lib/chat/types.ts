@@ -141,6 +141,7 @@ export const STANDARD_DETAILS = {
     language: "language",
     format: "format",
     venue: "venue",
+    imageUrl: "imageUrl",
 
     // Service fields (salon, plumber, etc.)
     location: "location",

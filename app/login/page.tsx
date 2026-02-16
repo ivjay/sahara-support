@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,10 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Logo } from "@/components/ui/logo";
-import { Loader2, Mail, Lock, User, Eye, EyeOff, UserCircle, Shield } from "lucide-react";
-import Link from "next/link";
+import { Loader2, Mail, Lock, User, Eye, EyeOff, UserCircle } from "lucide-react";
 
-export default function HomePage() {
-    const { signInWithGoogle, signInWithEmail, signUpWithEmail, continueAsGuest, user, loading, isAdmin } = useAuth();
+export default function LoginPage() {
+    const { signInWithGoogle, signInWithEmail, signUpWithEmail, continueAsGuest, user, loading } = useAuth();
     const router = useRouter();
     const [isSignUp, setIsSignUp] = useState(false);
     const [email, setEmail] = useState("");
@@ -24,11 +23,10 @@ export default function HomePage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Redirect if already logged in
-    useEffect(() => {
-        if (!loading && user) {
-            router.replace("/chat");
-        }
-    }, [user, loading, router]);
+    if (!loading && user) {
+        router.replace("/chat");
+        return null;
+    }
 
     const handleEmailAuth = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -90,15 +88,6 @@ export default function HomePage() {
         );
     }
 
-    // If user is authenticated, show loading while redirecting
-    if (user) {
-        return (
-            <div className="min-h-dvh flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/20">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
-        );
-    }
-
     return (
         <div className="min-h-dvh flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-background via-background to-muted/20">
             {/* Background decoration */}
@@ -113,11 +102,11 @@ export default function HomePage() {
                     <div className="flex justify-center mb-4">
                         <Logo size="md" showText={false} />
                     </div>
-                    <h1 className="text-3xl font-black bg-gradient-to-r from-primary via-blue-600 to-indigo-600 bg-clip-text text-transparent mb-1">
-                        Welcome to Sahara
+                    <h1 className="text-3xl font-black bg-gradient-to-r from-primary via-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                        {isSignUp ? "Create Account" : "Welcome to Sahara"}
                     </h1>
-                    <p className="text-muted-foreground text-sm">
-                        Your AI-powered booking assistant
+                    <p className="text-muted-foreground mt-2 text-sm">
+                        {isSignUp ? "Sign up to unlock all features" : "Sign in to book and manage your services"}
                     </p>
                 </div>
 

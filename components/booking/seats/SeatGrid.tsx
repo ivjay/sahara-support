@@ -83,12 +83,12 @@ export function SeatGrid({ rows, selectedSeats, onSeatClick, venueType }: SeatGr
                         {row.seats.map((seat, idx) => {
                             if (!seat) {
                                 // Aisle gap
-                                return <div key={idx} className="w-10" />;
+                                return <div key={`${row.label}-aisle-${idx}`} className="w-10" />;
                             }
 
                             return (
                                 <Seat
-                                    key={seat.label}
+                                    key={`${row.label}-${seat.label}`}
                                     label={seat.label}
                                     status={getSeatStatus(seat.label, seat.status)}
                                     type={seat.type}

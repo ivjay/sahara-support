@@ -25,8 +25,19 @@ export function OptionCard({ option, onSelect }: OptionCardProps) {
     return (
         <Card
             onClick={() => onSelect(option)}
-            className="p-4 cursor-pointer hover:border-primary hover:shadow-md transition-all"
+            className="p-4 cursor-pointer hover:border-primary hover:shadow-md transition-all overflow-hidden"
         >
+            {/* Movie poster banner */}
+            {option.type === "movie" && option.details?.imageUrl && (
+                <div className="relative -mx-4 -mt-4 mb-3 h-32 overflow-hidden">
+                    <img
+                        src={option.details.imageUrl}
+                        alt={option.title}
+                        className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
+                </div>
+            )}
             <div className="flex items-start gap-3">
                 {/* Simple icon */}
                 <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">

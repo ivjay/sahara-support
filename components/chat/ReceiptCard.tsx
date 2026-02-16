@@ -1,9 +1,11 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Download, Share2, MapPin, Calendar, Clock } from "lucide-react";
+import { Download, Share2, MapPin, Calendar, Clock, Loader2 } from "lucide-react";
 import QRCode from "react-qr-code";
 import { cn } from "@/lib/utils";
+import html2canvas from "html2canvas";
 
 interface ReceiptCardProps {
     data: {
@@ -22,10 +24,79 @@ interface ReceiptCardProps {
 
 export function ReceiptCard({ data }: ReceiptCardProps) {
     const isPaid = data.status === "Confirmed";
+    const receiptRef = useRef<HTMLDivElement>(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isSharing, setIsSharing] = useState(false);
+
+    const captureReceipt = async (): Promise<Blob | null> => {
+        if (!receiptRef.current) return null;
+        const canvas = await html2canvas(receiptRef.current, {
+            backgroundColor: "#ffffff",
+            scale: 2,
+            useCORS: true,
+            logging: false,
+        });
+        return new Promise((resolve) => {
+            canvas.toBlob((blob) => resolve(blob), "image/png", 1.0);
+        });
+    };
+
+    const handleDownload = async () => {
+        setIsSaving(true);
+        try {
+            const blob = await captureReceipt();
+            if (!blob) return;
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `sahara-receipt-${data.id}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("[ReceiptCard] Download failed:", err);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleShare = async () => {
+        setIsSharing(true);
+        try {
+            const blob = await captureReceipt();
+            if (!blob) return;
+
+            const file = new File([blob], `sahara-receipt-${data.id}.png`, { type: "image/png" });
+
+            if (navigator.share && navigator.canShare?.({ files: [file] })) {
+                await navigator.share({
+                    title: `Sahara Booking Receipt - ${data.id}`,
+                    text: `Booking: ${data.serviceName}\nDate: ${data.date} ${data.time}\nAmount: ${data.price}`,
+                    files: [file],
+                });
+            } else if (navigator.share) {
+                await navigator.share({
+                    title: `Sahara Booking Receipt - ${data.id}`,
+                    text: `Booking: ${data.serviceName}\nLocation: ${data.location}\nDate: ${data.date} ${data.time}\nAmount: ${data.price}\nStatus: ${data.status}`,
+                });
+            } else {
+                const text = `Sahara Booking Receipt\nID: ${data.id}\nService: ${data.serviceName}\nLocation: ${data.location}\nDate: ${data.date} ${data.time}\nAmount: ${data.price}\nStatus: ${data.status}`;
+                await navigator.clipboard.writeText(text);
+                alert("Receipt details copied to clipboard!");
+            }
+        } catch (err: any) {
+            if (err?.name !== "AbortError") {
+                console.error("[ReceiptCard] Share failed:", err);
+            }
+        } finally {
+            setIsSharing(false);
+        }
+    };
 
     return (
         <div className="max-w-sm mt-3 space-y-2">
-            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+            <div ref={receiptRef} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                 {/* Header */}
                 <div className="p-4 border-b border-dashed border-gray-200 dark:border-gray-700">
                     <div className={cn(
@@ -34,7 +105,7 @@ export function ReceiptCard({ data }: ReceiptCardProps) {
                             ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300"
                             : "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300"
                     )}>
-                        {isPaid ? "✓ Confirmed" : "⏳ Pending Payment"}
+                        {isPaid ? "Confirmed" : "Pending Payment"}
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-500 font-mono">REF: {data.id}</p>
                 </div>
@@ -96,13 +167,13 @@ export function ReceiptCard({ data }: ReceiptCardProps) {
 
             {/* Actions */}
             <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1 h-9 text-xs">
-                    <Download className="w-3 h-3 mr-1" />
-                    Save
+                <Button variant="outline" size="sm" className="flex-1 h-9 text-xs" onClick={handleDownload} disabled={isSaving}>
+                    {isSaving ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
+                    {isSaving ? "Saving..." : "Save"}
                 </Button>
-                <Button variant="outline" size="sm" className="flex-1 h-9 text-xs">
-                    <Share2 className="w-3 h-3 mr-1" />
-                    Share
+                <Button variant="outline" size="sm" className="flex-1 h-9 text-xs" onClick={handleShare} disabled={isSharing}>
+                    {isSharing ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Share2 className="w-3 h-3 mr-1" />}
+                    {isSharing ? "Sharing..." : "Share"}
                 </Button>
             </div>
         </div>

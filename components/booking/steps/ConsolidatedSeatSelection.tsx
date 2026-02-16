@@ -127,13 +127,26 @@ export function ConsolidatedSeatSelection({
     }
 
     const handleSeatClick = (label: string) => {
-        const newSeats = selectedSeats.includes(label)
-            ? selectedSeats.filter(s => s !== label)
-            : selectedSeats.length < passengerCount
-                ? [...selectedSeats, label]
-                : selectedSeats;
+        console.log('[SeatSelection] Clicked:', label, 'Currently selected:', selectedSeats);
 
-        onSeatsChange(newSeats);
+        // If already selected, remove it
+        if (selectedSeats.includes(label)) {
+            const newSeats = selectedSeats.filter(s => s !== label);
+            console.log('[SeatSelection] Removing seat, new seats:', newSeats);
+            onSeatsChange(newSeats);
+            return;
+        }
+
+        // If we haven't reached the limit, add it
+        if (selectedSeats.length < passengerCount) {
+            const newSeats = [...selectedSeats, label];
+            console.log('[SeatSelection] Adding seat, new seats:', newSeats);
+            onSeatsChange(newSeats);
+            return;
+        }
+
+        // Already at capacity - can't select more
+        console.log('[SeatSelection] At capacity, cannot select more');
     };
 
     const incrementCount = () => {

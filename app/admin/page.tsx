@@ -29,12 +29,17 @@ import { TransportForm } from "@/components/admin/TransportForm";
 import { MovieForm } from "@/components/admin/MovieForm";
 import { cn } from "@/lib/utils";
 import { LogoCompact } from "@/components/ui/logo";
+import { useAuth } from "@/lib/auth-context";
+import { UserPlus, X, Shield } from "lucide-react";
 
 export default function AdminPage() {
     const { services, addService, deleteService, isLoading } = useServices();
+    const { user, adminEmails, addAdmin, removeAdmin } = useAuth();
     const [searchQuery, setSearchQuery] = useState("");
     const [activeTab, setActiveTab] = useState("all");
     const [isAddMode, setIsAddMode] = useState(false);
+    const [showAdminPanel, setShowAdminPanel] = useState(false);
+    const [newAdminEmail, setNewAdminEmail] = useState("");
 
     // New Service State
     const [serviceType, setServiceType] = useState<"appointment" | "bus" | "flight" | "movie">("appointment");
@@ -145,6 +150,15 @@ export default function AdminPage() {
                     <div className="flex items-center gap-3">
                         {!isAddMode && (
                             <>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="rounded-full"
+                                    onClick={() => setShowAdminPanel(!showAdminPanel)}
+                                    title="Manage Admins"
+                                >
+                                    <Shield className="h-4 w-4" />
+                                </Button>
                                 <Link href="/admin/verify">
                                     <Button variant="outline" className="rounded-full border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-800">
                                         Verify Payments
@@ -165,6 +179,62 @@ export default function AdminPage() {
 
             <main className="flex-1 overflow-y-auto">
                 <div className="max-w-7xl mx-auto p-6">
+
+                {/* Admin Management Panel */}
+                {showAdminPanel && !isAddMode && (
+                    <Card className="p-6 mb-8 border-primary/20 bg-primary/5 animate-in slide-in-from-top-2 fade-in duration-200">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-bold flex items-center gap-2">
+                                <Shield className="h-4 w-4 text-primary" />
+                                Admin Management
+                            </h3>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowAdminPanel(false)}>
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        <div className="space-y-2 mb-4">
+                            {adminEmails.map((email) => (
+                                <div key={email} className="flex items-center justify-between px-3 py-2 bg-background rounded-lg border">
+                                    <span className="text-sm">{email}</span>
+                                    {email === "bijayacharya@example.com" || email === "acharyabijay07@gmail.com" ? (
+                                        <span className="text-[10px] text-muted-foreground px-2 py-0.5 bg-muted rounded-full">Owner</span>
+                                    ) : (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-7 text-xs text-destructive hover:text-destructive"
+                                            onClick={() => removeAdmin(email)}
+                                        >
+                                            Remove
+                                        </Button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        <form
+                            className="flex gap-2"
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                if (newAdminEmail.trim()) {
+                                    addAdmin(newAdminEmail);
+                                    setNewAdminEmail("");
+                                }
+                            }}
+                        >
+                            <Input
+                                placeholder="friend@email.com"
+                                value={newAdminEmail}
+                                onChange={(e) => setNewAdminEmail(e.target.value)}
+                                type="email"
+                                className="flex-1"
+                            />
+                            <Button type="submit" size="sm" className="gap-1">
+                                <UserPlus className="h-3.5 w-3.5" />
+                                Add Admin
+                            </Button>
+                        </form>
+                    </Card>
+                )}
 
                 {/* Stats / Overview (Simple) */}
                 {!isAddMode && (

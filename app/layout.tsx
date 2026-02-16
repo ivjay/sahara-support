@@ -38,6 +38,7 @@ export const metadata: Metadata = {
 import { ChatProvider } from "@/lib/chat/chat-context";
 import { ServiceProvider } from "@/lib/services/service-context";
 import { BookingProvider } from "@/lib/services/booking-context";
+import { AuthProvider } from "@/lib/auth-context";
 
 export default function RootLayout({
   children,
@@ -49,13 +50,15 @@ export default function RootLayout({
       <body
         className={`${geistMono.variable} font-sans antialiased`}
       >
-        <ServiceProvider>
-          <BookingProvider>
-            <ChatProvider>
-              {children}
-            </ChatProvider>
-          </BookingProvider>
-        </ServiceProvider>
+        <AuthProvider>
+          <ServiceProvider>
+            <BookingProvider>
+              <ChatProvider>
+                {children}
+              </ChatProvider>
+            </BookingProvider>
+          </ServiceProvider>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageSquare, Plus, Settings, HelpCircle, X, Moon, Sun, User } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { MessageSquare, Plus, Settings, HelpCircle, X, Moon, Sun, User, LogOut, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useChatContext } from "@/lib/chat/chat-context";
+import { useAuth } from "@/lib/auth-context";
 import { useState, useEffect } from "react";
 import { Logo, LogoCompact } from "@/components/ui/logo";
 
@@ -17,6 +19,7 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose, onNewChat }: SidebarProps) {
     const { state, clearChat, loadSession, deleteSession } = useChatContext();
+    const { user, signOut, isGuest, isAdmin } = useAuth();
     const [isDark, setIsDark] = useState(false);
 
     useEffect(() => {
@@ -49,7 +52,7 @@ export function Sidebar({ isOpen, onClose, onNewChat }: SidebarProps) {
 
             <aside
                 className={cn(
-                    "h-full bg-background/95 backdrop-blur-sm border-r border-border/50 flex flex-col",
+                    "h-full bg-background/95 backdrop-blur-sm border-r border-border/50 flex flex-col overflow-hidden",
                     "fixed lg:relative inset-y-0 left-0 z-50 w-[280px] lg:w-full",
                     "transition-transform duration-300 ease-in-out",
                     "lg:translate-x-0",
@@ -91,8 +94,8 @@ export function Sidebar({ isOpen, onClose, onNewChat }: SidebarProps) {
                     </Button>
                 </div>
 
-                {/* Chat History */}
-                <ScrollArea className="flex-1 px-3 py-2">
+                {/* Scrollable Content */}
+                <ScrollArea className="flex-1 px-3 py-2 overflow-y-auto">
                     {state.messages.length > 0 && (
                         <div className="mb-4">
                             <p className="px-2 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
@@ -139,6 +142,14 @@ export function Sidebar({ isOpen, onClose, onNewChat }: SidebarProps) {
 
                 {/* Bottom Navigation */}
                 <div className="border-t border-border/50 p-3 space-y-1">
+                    {isAdmin && (
+                        <Link href="/admin" onClick={onClose}>
+                            <Button variant="ghost" className="w-full justify-start gap-2.5 h-10 text-sm rounded-lg" size="sm">
+                                <Shield className="h-4 w-4" />
+                                Admin Panel
+                            </Button>
+                        </Link>
+                    )}
                     <Link href="/settings" onClick={onClose}>
                         <Button variant="ghost" className="w-full justify-start gap-2.5 h-10 text-sm rounded-lg" size="sm">
                             <Settings className="h-4 w-4" />
@@ -153,19 +164,51 @@ export function Sidebar({ isOpen, onClose, onNewChat }: SidebarProps) {
                     </Link>
 
                     {/* User Profile Card */}
-                    <Link href="/profile" onClick={onClose}>
-                        <div className="mt-3 p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors cursor-pointer border border-border/50">
-                            <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center text-sm font-bold text-white shadow-md">
-                                    {state.userProfile?.avatarInitials || <User className="h-5 w-5" />}
+                    <div className="mt-3 p-3 rounded-xl bg-muted/50 hover:bg-muted/70 transition-colors border border-border/50">
+                        {user ? (
+                            <>
+                                <Link href="/profile" onClick={onClose}>
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center text-sm font-bold text-white shadow-md">
+                                            {user.displayName ? user.displayName[0].toUpperCase() : <User className="h-5 w-5" />}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-semibold truncate">{user.displayName || "User"}</p>
+                                            <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                                        </div>
+                                    </div>
+                                </Link>
+                                <Separator className="my-2" />
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full justify-center gap-2 h-9 text-sm border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                    onClick={async () => {
+                                        if (confirm('Are you sure you want to sign out?')) {
+                                            await signOut();
+                                            onClose();
+                                            window.location.href = '/';
+                                        }
+                                    }}
+                                >
+                                    <LogOut className="h-4 w-4" />
+                                    Sign Out
+                                </Button>
+                            </>
+                        ) : (
+                            <Link href="/" onClick={onClose}>
+                                <div className="flex items-center gap-3">
+                                    <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                                        <User className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-semibold">Guest</p>
+                                        <p className="text-xs text-primary font-medium">Sign in to book</p>
+                                    </div>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold truncate">{state.userProfile?.name || "Guest User"}</p>
-                                    <p className="text-xs text-muted-foreground">{state.userProfile?.accountType || "Free Plan"}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </Link>
+                            </Link>
+                        )}
+                    </div>
                 </div>
             </aside>
         </>

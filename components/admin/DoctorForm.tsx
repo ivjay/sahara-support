@@ -37,10 +37,9 @@ export function DoctorForm({ data, onChange }: DoctorFormProps) {
                 <div>
                     <Label>Specialty *</Label>
                     <Select
-                        value={data.subtitle || ""}
+                        value={data.subtitle || undefined}
                         onValueChange={(value) => {
-                            updateField("subtitle", value);
-                            updateField("category", "doctor");
+                            onChange({ ...data, subtitle: value, category: "doctor" });
                         }}
                     >
                         <SelectTrigger>

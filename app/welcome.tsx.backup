@@ -1,0 +1,122 @@
+"use client";
+
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { MessageSquare, Plane, Bus, Calendar, Film, ArrowRight, User, LogIn, Shield } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Logo } from "@/components/ui/logo";
+import { useAuth } from "@/lib/auth-context";
+
+export default function HomePage() {
+    const [mounted, setMounted] = useState(false);
+    const { user, isAdmin } = useAuth();
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    return (
+        <main className="min-h-dvh flex flex-col items-center justify-center p-6 relative overflow-hidden bg-gradient-to-br from-background via-background to-muted/20">
+            {/* Background */}
+            <div className="absolute inset-0 -z-10">
+                <div className="absolute top-20 -left-20 w-[600px] h-[600px] bg-gradient-to-br from-primary/25 via-chart-2/15 to-transparent rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '10s' }} />
+                <div className="absolute bottom-20 -right-20 w-[700px] h-[700px] bg-gradient-to-tl from-chart-3/25 via-primary/15 to-transparent rounded-full blur-[120px]" />
+            </div>
+
+            {/* Top bar */}
+            <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10">
+                {isAdmin && (
+                    <Link href="/admin">
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card/80 backdrop-blur-sm border border-border/50 shadow-sm hover:shadow-md transition-all text-xs font-medium">
+                            <Shield className="h-3.5 w-3.5 text-primary" />
+                            Admin
+                        </div>
+                    </Link>
+                )}
+                <div className="flex-1" />
+                {user ? (
+                    <Link href="/profile">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center text-sm font-bold text-white shadow-lg shadow-primary/20 hover:scale-105 transition-all">
+                            {user.displayName ? user.displayName[0].toUpperCase() : <User className="h-5 w-5" />}
+                        </div>
+                    </Link>
+                ) : (
+                    <Link href="/login">
+                        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card/80 backdrop-blur-sm border border-border/50 shadow-sm hover:shadow-md transition-all">
+                            <LogIn className="h-4 w-4 text-primary" />
+                            <span className="text-sm font-semibold">Sign In</span>
+                        </div>
+                    </Link>
+                )}
+            </div>
+
+            <div className="max-w-lg w-full text-center relative">
+                {/* Logo + Title */}
+                <div className={`mb-6 transition-all duration-700 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+                    <div className="relative w-24 h-24 mx-auto mb-6">
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-chart-2/20 rounded-full blur-2xl animate-pulse" style={{ animationDuration: '6s' }} />
+                        <div className="relative">
+                            <Logo size="lg" showText={false} className="mx-auto" />
+                        </div>
+                    </div>
+
+                    <h1 className="text-5xl md:text-6xl font-black mb-3 tracking-tight text-gradient-vibrant">
+                        Sahara
+                    </h1>
+                    <p className="text-muted-foreground text-base max-w-sm mx-auto leading-relaxed">
+                        Book flights, buses, doctors, and movies
+                        <br />
+                        <span className="text-gradient-vibrant font-semibold">all in one conversation.</span>
+                    </p>
+                </div>
+
+                {/* Feature Grid - Compact */}
+                <div className={`mb-6 transition-all duration-700 delay-100 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+                    <div className="grid grid-cols-4 gap-3 max-w-sm mx-auto">
+                        {[
+                            { icon: Bus, label: "Bus", color: "text-orange-500 bg-orange-500/10" },
+                            { icon: Plane, label: "Flights", color: "text-blue-500 bg-blue-500/10" },
+                            { icon: Calendar, label: "Doctors", color: "text-green-500 bg-green-500/10" },
+                            { icon: Film, label: "Movies", color: "text-purple-500 bg-purple-500/10" },
+                        ].map(({ icon: Icon, label, color }) => (
+                            <div key={label} className="flex flex-col items-center gap-2 p-3 rounded-xl border border-border/30 bg-card/50 backdrop-blur-sm">
+                                <div className={`w-10 h-10 rounded-lg ${color} flex items-center justify-center`}>
+                                    <Icon className="h-5 w-5" />
+                                </div>
+                                <span className="text-xs font-medium">{label}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* CTA Button */}
+                <div className={`transition-all duration-700 delay-200 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+                    <Link href="/chat">
+                        <Button
+                            size="lg"
+                            className="w-full max-w-sm gap-3 h-14 text-base font-bold rounded-2xl bg-gradient-to-r from-primary to-indigo-600 shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                        >
+                            <MessageSquare className="h-5 w-5" />
+                            Start Chatting
+                            <ArrowRight className="h-5 w-5" />
+                        </Button>
+                    </Link>
+                </div>
+
+                {/* Trust badges */}
+                <div className={`flex items-center justify-center gap-4 mt-6 transition-all duration-700 delay-300 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+                    {[
+                        { label: "24/7 Available", color: "bg-green-500" },
+                        { label: "Secure", color: "bg-blue-500" },
+                        { label: "Free", color: "bg-purple-500" }
+                    ].map(({ label, color }) => (
+                        <div key={label} className="flex items-center gap-1.5">
+                            <div className={`w-1.5 h-1.5 rounded-full ${color}`} />
+                            <span className="text-xs text-muted-foreground font-medium">{label}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </main>
+    );
+}

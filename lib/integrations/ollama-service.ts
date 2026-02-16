@@ -86,10 +86,10 @@ async function httpRequest(
             });
         });
 
-        // Set timeout to prevent hanging the whole app (30s for local LLMs)
-        req.setTimeout(30000, () => {
+        // Set timeout to prevent hanging the whole app (60s for local LLMs)
+        req.setTimeout(60000, () => {
             req.destroy();
-            reject(new Error('Ollama request timed out after 30 seconds. The model might be loading or the server is slow. Check your CPU/GPU usage.'));
+            reject(new Error('Ollama request timed out after 60 seconds. The model might be loading or the server is slow. Check your CPU/GPU usage.'));
         });
 
         req.on('error', (error) => {

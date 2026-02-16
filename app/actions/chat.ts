@@ -27,29 +27,33 @@ export interface AgentResponseAPIType {
 }
 
 /**
- * Fetch admin-created services from Supabase
+ * Fetch admin-created services from Supabase (with timeout)
  */
 async function getAdminServices(): Promise<BookingOption[]> {
     try {
         const { supabase } = await import("@/lib/supabase");
 
-        // Fetch all admin-created services
-        const { data, error } = await supabase
+        // Add a race condition with timeout to fail fast
+        const fetchPromise = supabase
             .from('services')
             .select('*')
             .eq('available', true);
 
+        const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Supabase timeout')), 2000)
+        );
+
+        const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+
         if (error) {
-            console.warn('[Chat] Could not fetch admin services:', error);
             return [];
         }
 
         if (!data || data.length === 0) {
-            console.log('[Chat] ℹ️ No admin services found in database');
             return [];
         }
 
-        // ✅ Convert to BookingOption format (matching the actual services table structure)
+        // ✅ Convert to BookingOption format
         return data.map((service: any) => ({
             id: service.id,
             type: service.type || 'appointment',
@@ -63,7 +67,7 @@ async function getAdminServices(): Promise<BookingOption[]> {
             qrCodeUrl: service.qrCodeUrl
         })) as BookingOption[];
     } catch (error) {
-        console.warn('[Chat] Admin services fetch failed:', error);
+        // Silently fail - just use mock data
         return [];
     }
 }
@@ -207,10 +211,58 @@ export async function sendMessage(
     }
 }
 
+// Track Ollama health to avoid repeated timeouts
+let ollamaHealthy = true;
+let lastHealthCheck = 0;
+const HEALTH_CHECK_INTERVAL = 30000; // Check every 30s
+
+async function checkOllamaHealth(): Promise<boolean> {
+    const now = Date.now();
+    if (now - lastHealthCheck < HEALTH_CHECK_INTERVAL) {
+        return ollamaHealthy;
+    }
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+        const response = await fetch('http://127.0.0.1:11434/api/tags', {
+            signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+        ollamaHealthy = response.ok;
+        lastHealthCheck = now;
+        return ollamaHealthy;
+    } catch {
+        ollamaHealthy = false;
+        lastHealthCheck = now;
+        return false;
+    }
+}
+
 export async function getAgentResponse(
     userMessage: string,
     conversationHistory: Array<{ role: "user" | "assistant"; content: string }>
 ) {
+    // Quick health check before attempting Ollama call
+    const isHealthy = await checkOllamaHealth();
+
+    if (!isHealthy) {
+        console.log("[Chat] ⚠️ Ollama unavailable, using fallback");
+        return {
+            content: "I can help you with bookings. What service would you like to book?",
+            stage: "gathering",
+            language: "en",
+            booking_type: null,
+            collected_details: {},
+            showOptions: null as import("@/lib/chat/types").Intent | null,
+            optionType: null,
+            filterCategory: null as string | null,
+            quickReplies: [] as string[]
+        };
+    }
+
     try {
         console.log("[Chat] 🦙 Calling Ollama...");
 
@@ -228,6 +280,7 @@ export async function getAgentResponse(
         const parsed = parseBookingResponse(rawResponse.message.content);
 
         console.log("[Chat] ✓ Stage:", parsed.stage);
+        ollamaHealthy = true; // Mark as healthy if successful
 
         return {
             content: parsed.message,
@@ -243,9 +296,10 @@ export async function getAgentResponse(
 
     } catch (error: any) {
         console.error("[Chat] AI failed:", error.message);
+        ollamaHealthy = false; // Mark as unhealthy
 
         return {
-            content: "I can help you with bookings. What do you need?",
+            content: "I can help you with bookings. What service would you like to book?",
             stage: "gathering",
             language: "en",
             booking_type: null,
