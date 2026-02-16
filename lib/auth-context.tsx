@@ -76,6 +76,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsGuest(true);
         }
 
+        if (!auth) {
+            setLoading(false);
+            return;
+        }
+
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             setUser(user);
             if (user) {
@@ -90,18 +95,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const isAdmin = !!(user?.email && adminEmails.includes(user.email.toLowerCase()));
 
     const signInWithGoogle = async () => {
+        if (!auth) throw new Error("Firebase Authentication is not initialized");
         setIsGuest(false);
         localStorage.removeItem("sahara_guest_mode");
         await signInWithPopup(auth, googleProvider);
     };
 
     const signInWithEmail = async (email: string, password: string) => {
+        if (!auth) throw new Error("Firebase Authentication is not initialized");
         setIsGuest(false);
         localStorage.removeItem("sahara_guest_mode");
         await signInWithEmailAndPassword(auth, email, password);
     };
 
     const signUpWithEmail = async (email: string, password: string, name: string) => {
+        if (!auth) throw new Error("Firebase Authentication is not initialized");
         setIsGuest(false);
         localStorage.removeItem("sahara_guest_mode");
         const result = await createUserWithEmailAndPassword(auth, email, password);
@@ -109,6 +117,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const signOut = async () => {
+        if (!auth) {
+            setIsGuest(false);
+            localStorage.removeItem("sahara_guest_mode");
+            return;
+        }
         setIsGuest(false);
         localStorage.removeItem("sahara_guest_mode");
         await firebaseSignOut(auth);

@@ -54,12 +54,18 @@ export async function processMessage(
         const msg = userMessage.toLowerCase();
 
         // Check if user is confirming they've paid (more specific keywords)
-        const paymentConfirmed = (
-            (msg.includes("paid") || msg.includes("payment") && (msg.includes("done") || msg.includes("completed"))) ||
+        // Avoid false positives like "I haven't paid" by checking for negative keywords
+        const hasNegativeKeyword = msg.includes("not") || msg.includes("haven't") || msg.includes("didn't") ||
+                                     msg.includes("gareko chaina") || msg.includes("gareko chhaina");
+
+        const paymentConfirmed = !hasNegativeKeyword && (
             msg.includes("i have paid") ||
             msg.includes("payment done") ||
+            msg.includes("payment completed") ||
+            msg.includes("paid successfully") ||
             msg.includes("paid gareko") ||
-            msg.includes("payment garisakeko")
+            msg.includes("payment garisakeko") ||
+            msg.includes("payment gareko")
         );
 
         if (paymentConfirmed) {

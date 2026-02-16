@@ -128,12 +128,13 @@ export function BookingWizard({
                                 <h3 className="text-sm font-medium mb-3">Enter Your Details</h3>
                                 <div className="space-y-3">
                                     <div>
-                                        <label className="text-sm font-medium">Full Name</label>
+                                        <label className="text-sm font-medium">Full Name <span className="text-destructive">*</span></label>
                                         <input
                                             type="text"
                                             className="w-full mt-1 px-3 py-2 border rounded-lg"
                                             placeholder="Enter your name"
                                             defaultValue={userProfile?.name}
+                                            required
                                             onChange={(e) => {
                                                 const newPassengers = [...passengers];
                                                 newPassengers[0] = { ...newPassengers[0], fullName: e.target.value };
@@ -142,12 +143,13 @@ export function BookingWizard({
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium">Phone</label>
+                                        <label className="text-sm font-medium">Phone <span className="text-destructive">*</span></label>
                                         <input
                                             type="tel"
                                             className="w-full mt-1 px-3 py-2 border rounded-lg"
                                             placeholder="Enter phone number"
                                             defaultValue={userProfile?.phone}
+                                            required
                                             onChange={(e) => {
                                                 const newPassengers = [...passengers];
                                                 newPassengers[0] = { ...newPassengers[0], phone: e.target.value };
@@ -156,7 +158,7 @@ export function BookingWizard({
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium">Email</label>
+                                        <label className="text-sm font-medium">Email (Optional)</label>
                                         <input
                                             type="email"
                                             className="w-full mt-1 px-3 py-2 border rounded-lg"
@@ -187,7 +189,10 @@ export function BookingWizard({
                                     setTotalPrice(price);
                                     setActiveTab("payment");
                                 }}
-                                disabled={needsSeats ? selectedSeats.length === 0 : !passengers[0]?.fullName}
+                                disabled={needsSeats
+                                    ? selectedSeats.length === 0 || !passengers[0]?.fullName?.trim() || !passengers[0]?.phone?.trim()
+                                    : !passengers[0]?.fullName?.trim() || !passengers[0]?.phone?.trim()
+                                }
                             >
                                 Next: Payment
                             </Button>

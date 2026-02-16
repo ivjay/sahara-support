@@ -26,10 +26,14 @@ export function PaymentStep({
     const [selectedMethod, setSelectedMethod] = useState<PaymentGateway | null>(null);
     const [processing, setProcessing] = useState(false);
     const [initiatingPayment, setInitiatingPayment] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const esewaFormRef = useRef<HTMLFormElement>(null);
 
     async function handleConfirm() {
         if (!selectedMethod) return;
+
+        // Clear previous errors
+        setError(null);
 
         // Handle cash payment directly
         if (selectedMethod === 'cash') {
@@ -84,7 +88,7 @@ export function PaymentStep({
             onComplete(result.id || bookingId);
         } catch (error) {
             console.error('[PaymentStep] Cash booking failed:', error);
-            alert('Booking failed. Please try again.');
+            setError('Booking failed. Please try again.');
         } finally {
             setProcessing(false);
         }
@@ -159,7 +163,7 @@ export function PaymentStep({
             }
         } catch (error: any) {
             console.error('[PaymentStep] Digital payment failed:', error);
-            alert(error.message || 'Payment initiation failed. Please try again.');
+            setError(error.message || 'Payment initiation failed. Please try again.');
             setInitiatingPayment(false);
         }
     }
@@ -266,6 +270,13 @@ export function PaymentStep({
                     <p className="text-sm text-amber-900 dark:text-amber-100">
                         <strong>Note:</strong> Please bring cash payment when you arrive at the counter.
                     </p>
+                </Card>
+            )}
+
+            {/* Error message */}
+            {error && (
+                <Card className="p-4 bg-destructive/10 border-destructive/20">
+                    <p className="text-sm text-destructive font-medium">{error}</p>
                 </Card>
             )}
 

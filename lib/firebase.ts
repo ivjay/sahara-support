@@ -1,16 +1,35 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
+// Validate required Firebase environment variables
 const firebaseConfig = {
-    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyAZgB_yge5u5gO_ky-pB2N8mXAlsNjGSf8",
-    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "sahara-14ce5.firebaseapp.com",
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "sahara-14ce5",
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "sahara-14ce5.firebasestorage.app",
-    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "527053568248",
-    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:527053568248:web:c0baa25023e1713b20230d",
-    measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-TP64LSZC92",
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-export const auth = getAuth(app);
+// Check for missing required variables (only check if we're not in a build environment or if we actually need them)
+const requiredKeys: (keyof typeof firebaseConfig)[] = [
+    'apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'
+];
+
+const missingKeys = requiredKeys.filter(key => !firebaseConfig[key]);
+
+if (missingKeys.length > 0) {
+    console.warn(
+        `Firebase warning: Missing required environment variables: ${missingKeys.join(', ')}. ` +
+        'Authentication and other Firebase services may not function correctly.'
+    );
+}
+
+// Only initialize if we have the minimum requirements, otherwise export null/dummy
+const app = (getApps().length === 0 && firebaseConfig.apiKey)
+    ? initializeApp(firebaseConfig)
+    : (getApps().length > 0 ? getApp() : null);
+
+export const auth = app ? getAuth(app) : null;
 export default app;
