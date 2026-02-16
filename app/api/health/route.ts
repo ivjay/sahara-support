@@ -6,7 +6,30 @@ export const dynamic = 'force-dynamic';
  * GET /api/health - Check system health and configuration
  */
 export async function GET() {
-    const health = {
+    const health: {
+        status: string;
+        timestamp: string;
+        environment: string;
+        checks: {
+            supabase: {
+                configured: boolean;
+                url: string;
+                anonKey: string;
+                connected?: boolean;
+                error?: string;
+            };
+            firebase: {
+                configured: boolean;
+                apiKey: string;
+                authDomain: string;
+            };
+            ollama: {
+                configured: boolean;
+                baseUrl: string;
+            };
+        };
+        warnings: string[];
+    } = {
         status: 'ok',
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development',
@@ -26,7 +49,7 @@ export async function GET() {
                 baseUrl: process.env.OLLAMA_BASE_URL || 'Not set'
             }
         },
-        warnings: [] as string[]
+        warnings: []
     };
 
     // Add warnings for missing critical configs
