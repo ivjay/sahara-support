@@ -19,6 +19,19 @@ export function SeatGrid({ rows, selectedSeats, onSeatClick, venueType }: SeatGr
     const isBus = venueType === 'bus';
     const isFlight = venueType === 'flight' || venueType === 'airplane';
 
+    // For bus and flight, enforce 2 + aisle + 2 layout per row
+    const reshapeRow = (seats: (any | null)[]): (any | null)[] => {
+        const actual = seats.filter(Boolean);
+        if (actual.length <= 1) return actual;
+        const left = actual.slice(0, 2);
+        const right = actual.slice(2);
+        return right.length > 0 ? [...left, null, ...right] : left;
+    };
+
+    const processedRows = (isBus || isFlight)
+        ? rows.map(row => ({ ...row, seats: reshapeRow(row.seats) }))
+        : rows;
+
     return (
         <div className="space-y-4">
             {/* Movie Screen */}
@@ -71,7 +84,7 @@ export function SeatGrid({ rows, selectedSeats, onSeatClick, venueType }: SeatGr
 
             {/* Seats */}
             <div className="space-y-2">
-                {rows.map((row) => (
+                {processedRows.map((row) => (
                     <div key={row.label} className="flex items-center gap-2">
                         {/* Row label */}
                         <div className="w-6 text-center text-sm font-bold text-gray-600">
