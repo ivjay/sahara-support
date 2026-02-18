@@ -63,7 +63,7 @@ export function BookingWizard({
     const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
     const [totalPrice, setTotalPrice] = useState(selectedService.price || 0);
 
-    const needsTime = serviceType === 'movie' || serviceType === 'appointment';
+    const needsTime = true; // all service types need a departure / showtime / slot
     const needsSeats = serviceType === 'movie' || serviceType === 'bus' || serviceType === 'flight';
 
     return (

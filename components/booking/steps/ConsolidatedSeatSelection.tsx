@@ -259,6 +259,8 @@ export function ConsolidatedSeatSelection({
                     selectedSeats={selectedSeats}
                     onSeatClick={handleSeatClick}
                     venueType={serviceType ? SERVICE_TYPE_TO_VENUE_TYPE[serviceType] : venue?.venue_type}
+                    eventDate={eventDate}
+                    eventTime={eventTime}
                 />
 
                 {/* Legend */}
