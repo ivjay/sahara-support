@@ -18,6 +18,7 @@ interface ChatMessageProps {
 
 // Simple markdown-like text formatting
 function formatMessageContent(content: string): React.ReactNode {
+    if (!content) return null;
     const lines = content.split('\n');
 
     return lines.map((line, i) => {
@@ -120,7 +121,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 )}
 
                 {/* Quick Replies */}
-                {!isUser && message.quickReplies && message.quickReplies.length > 0 && !message.content.includes("Verifying") && (
+                {!isUser && message.quickReplies && message.quickReplies.length > 0 && !message.content?.includes("Verifying") && (
                     <div className="flex flex-wrap gap-2 mt-2">
                         {message.quickReplies.map((reply) => (
                             <Button

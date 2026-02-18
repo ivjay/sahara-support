@@ -131,6 +131,7 @@ export function BookingWizard({
                                     passengers={passengers}
                                     selectedSeats={selectedSeats}
                                     sessionId={sessionId}
+                                    serviceType={serviceType}
                                     userProfile={userProfile}
                                     onPassengerCountChange={setPassengerCount}
                                     onPassengerChange={(index, info) => {
@@ -149,7 +150,7 @@ export function BookingWizard({
                                 {passengers.slice(0, passengerCount).map((passenger, index) => (
                                     <div key={index} className="space-y-3 p-4 border rounded-lg bg-muted/30">
                                         <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                            Passenger {index + 1} {index === 0 && "(Primary Contact)"}
+                                            {serviceType === 'appointment' ? 'Patient' : 'Passenger'} {index + 1} {index === 0 && "(Primary Contact)"}
                                         </p>
                                         <div>
                                             <label className="text-sm font-medium">Full Name <span className="text-destructive">*</span></label>

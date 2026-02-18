@@ -52,7 +52,8 @@ export default function ChatPage() {
             const response = await newSendMessage(
                 text,
                 conversationId,
-                conversationHistoryRef.current
+                conversationHistoryRef.current,
+                state.userProfile?.name
             );
 
             console.log("[Chat] Response received:", response);
@@ -385,18 +386,20 @@ export default function ChatPage() {
                                         const receiptData = {
                                             id: booking.id,
                                             serviceName: booking.title,
-                                            location: booking.subtitle,
+                                            location: booking.subtitle || booking.details?.hospital || booking.details?.clinic || booking.details?.theater || booking.details?.to || '',
                                             date: new Date(booking.date).toLocaleDateString(),
                                             time: booking.details?.time || 'N/A',
-                                            seats: booking.details?.seats?.join(', ') || 'N/A',
+                                            seats: booking.details?.seats?.join(', ') || undefined,
                                             passengers: booking.details?.passengerCount || 1,
+                                            passengerNames: (booking.details?.passengers || []).map((p: any) => p.fullName).filter(Boolean),
+                                            serviceType: booking.type,
                                             price: booking.amount,
                                             status: booking.status as "Confirmed" | "Pending" | "Under Review",
                                             userName: state.userProfile?.name || "Guest",
                                             userPhone: state.userProfile?.phone || "N/A",
                                             timestamp: new Date().toISOString(),
                                             paymentMethod: booking.details?.paymentMethod as 'qr' | 'cash' | undefined,
-                                            qrCodeUrl: booking.details?.paymentMethod === 'qr' ? undefined : undefined // TODO: Add actual QR code URL
+                                            qrCodeUrl: undefined
                                         };
 
                                         // Natural, conversational confirmation
@@ -407,18 +410,31 @@ export default function ChatPage() {
                                         // Check if any changes were made (future: reschedule logic)
                                         const wasRescheduled = false; // TODO: Implement actual rescheduling detection
 
+                                        // Helper: get smart location label
+                                        const locationLabel = booking.subtitle ||
+                                            booking.details?.hospital ||
+                                            booking.details?.clinic ||
+                                            booking.details?.theater ||
+                                            booking.details?.to ||
+                                            'See booking details';
+
+                                        // Helper: context-aware people label
+                                        const isAppointment = wizardState?.serviceType === 'appointment';
+                                        const peopleLabel = isAppointment ? 'Patient(s)' : 'Passengers';
+
+                                        // Helper: passenger/patient names
+                                        const passengerNames = booking.details?.passengers?.map((p: any) => p.fullName).filter(Boolean) || [];
+                                        const peopleListLabel = isAppointment ? 'Patient' : 'Passengers';
+                                        const passengerList = passengerNames.length > 0
+                                            ? `\n👤 **${peopleListLabel}:**\n` + passengerNames.map((n: string, i: number) => `   ${i + 1}. ${n}`).join('\n')
+                                            : '';
+
+                                        const arriveEarly = wizardState?.serviceType === 'movie' ? '15 minutes' : wizardState?.serviceType === 'bus' || wizardState?.serviceType === 'flight' ? '30 minutes' : '10 minutes';
+
                                         if (booking.status === 'Under Review') {
-                                            // Get passenger names if available
-                                            const passengerNames = booking.details?.passengers?.map((p: any) => p.fullName).filter(Boolean) || [];
-                                            const passengerList = passengerNames.length > 0 ? '\n👥 **Passengers:**\n' + passengerNames.map((n: string, i: number) => `   ${i + 1}. ${n}`).join('\n') : '';
-
-                                            confirmationMessage = `✅ **Perfect! Your booking is reserved${greetingName}!**\n\nI've successfully booked **${booking.title}** for you!\n\n📋 **Complete Booking Details:**\n━━━━━━━━━━━━━━━━━━━━\n🆔 Booking ID: **${booking.id}**\n📍 Location: ${booking.subtitle}\n📅 Date: ${receiptData.date}\n🕐 Time: ${receiptData.time}${receiptData.seats !== 'N/A' ? `\n💺 Seats: **${receiptData.seats}**` : ''}${receiptData.passengers > 1 ? `\n👥 Total Passengers: ${receiptData.passengers}` : ''}${passengerList}\n💰 Total Amount: **${booking.amount}**\n━━━━━━━━━━━━━━━━━━━━\n\n**Next Steps:**\n1️⃣ Scan the QR code above to complete payment\n2️⃣ Our team will verify (2-5 minutes)\n3️⃣ You'll get confirmation here\n\n⏰ **Important:** Please arrive ${wizardState?.serviceType === 'movie' ? '15 minutes' : wizardState?.serviceType === 'bus' || wizardState?.serviceType === 'flight' ? '30 minutes' : '10 minutes'} before your scheduled time.\n\n💾 Save your booking ID: **${booking.id}**`;
+                                            confirmationMessage = `✅ **Perfect! Your booking is reserved${greetingName}!**\n\nI've successfully booked **${booking.title}** for you!\n\n📋 **Complete Booking Details:**\n━━━━━━━━━━━━━━━━━━━━\n🆔 Booking ID: **${booking.id}**\n📍 ${isAppointment ? 'Clinic' : 'Location'}: ${locationLabel}\n📅 Date: ${receiptData.date}\n🕐 Time: ${receiptData.time}${receiptData.seats && receiptData.seats !== 'N/A' ? `\n💺 Seats: **${receiptData.seats}**` : ''}${receiptData.passengers > 1 ? `\n👥 ${peopleLabel}: ${receiptData.passengers}` : ''}${passengerList}\n💰 Total Amount: **${booking.amount}**\n━━━━━━━━━━━━━━━━━━━━\n\n**Next Steps:**\n1️⃣ Scan the QR code above to complete payment\n2️⃣ Our team will verify (2-5 minutes)\n3️⃣ You'll get confirmation here\n\n⏰ **Important:** Please arrive **${arriveEarly} early**.\n\n💾 Save your booking ID: **${booking.id}**`;
                                         } else if (booking.status === 'Confirmed') {
-                                            // Get passenger names if available
-                                            const passengerNames = booking.details?.passengers?.map((p: any) => p.fullName).filter(Boolean) || [];
-                                            const passengerList = passengerNames.length > 0 ? '\n👥 **Passengers:**\n' + passengerNames.map((n: string, i: number) => `   ${i + 1}. ${n}`).join('\n') : '';
-
-                                            const encouragement = wizardState?.serviceType === 'appointment'
+                                            const encouragement = isAppointment
                                                 ? 'The specialist is ready to see you!'
                                                 : wizardState?.serviceType === 'movie'
                                                 ? 'Enjoy the show! 🍿'
@@ -426,7 +442,7 @@ export default function ChatPage() {
                                                 ? 'Have a safe journey! ✈️'
                                                 : 'Looking forward to seeing you there!';
 
-                                            confirmationMessage = `🎉 **All done${greetingName}! You're confirmed!**\n\n${wasRescheduled ? '⚠️ Quick note: I had to adjust your time slightly due to high demand, but everything else is perfect!\n\n' : ''}Your booking for **${booking.title}** is now **CONFIRMED**!\n\n📋 **Complete Booking Details:**\n━━━━━━━━━━━━━━━━━━━━\n🆔 Booking ID: **${booking.id}**\n📍 Location: ${booking.subtitle}\n📅 Date: ${receiptData.date}\n🕐 Time: ${receiptData.time}${receiptData.seats !== 'N/A' ? `\n💺 Seats: **${receiptData.seats}**` : ''}${receiptData.passengers > 1 ? `\n👥 Total Passengers: ${receiptData.passengers}` : ''}${passengerList}\n💰 Total: **${booking.amount}**\n${booking.details?.paymentMethod === 'cash' ? '💵 Payment: **On Arrival**' : '💳 Payment: **Received ✓**'}\n━━━━━━━━━━━━━━━━━━━━\n\n${encouragement}\n\n⏰ **Please arrive ${wizardState?.serviceType === 'movie' ? '15 minutes' : wizardState?.serviceType === 'bus' || wizardState?.serviceType === 'flight' ? '30 minutes' : '10 minutes'} early.**\n\nSee you there! 🎊`;
+                                            confirmationMessage = `🎉 **All done${greetingName}! You're confirmed!**\n\n${wasRescheduled ? '⚠️ Quick note: I had to adjust your time slightly due to high demand, but everything else is perfect!\n\n' : ''}Your booking for **${booking.title}** is now **CONFIRMED**!\n\n📋 **Complete Booking Details:**\n━━━━━━━━━━━━━━━━━━━━\n🆔 Booking ID: **${booking.id}**\n📍 ${isAppointment ? 'Clinic' : 'Location'}: ${locationLabel}\n📅 Date: ${receiptData.date}\n🕐 Time: ${receiptData.time}${receiptData.seats && receiptData.seats !== 'N/A' ? `\n💺 Seats: **${receiptData.seats}**` : ''}${receiptData.passengers > 1 ? `\n👥 ${peopleLabel}: ${receiptData.passengers}` : ''}${passengerList}\n💰 Total: **${booking.amount}**\n${booking.details?.paymentMethod === 'cash' ? '💵 Payment: **On Arrival**' : '💳 Payment: **Received ✓**'}\n━━━━━━━━━━━━━━━━━━━━\n\n${encouragement}\n\n⏰ **Please arrive ${arriveEarly} early.**\n\nSee you there! 🎊`;
                                         }
 
                                         // Add reschedule notice if needed (future enhancement)
@@ -435,7 +451,14 @@ export default function ChatPage() {
                                             confirmationMessage += `\n\n⚠️ **Note:** I had to adjust your time slot due to high demand. Your new time is ${receiptData.time}. Hope this works for you!`;
                                         }
 
-                                        addMessage(confirmationMessage, "assistant", { receipt: receiptData });
+                                        const postBookingReplies = isAppointment
+                                            ? ["View my appointments", "Reschedule", "Book another"]
+                                            : ["View my bookings", "Book another"];
+
+                                        addMessage(confirmationMessage, "assistant", {
+                                            receipt: receiptData,
+                                            quickReplies: postBookingReplies
+                                        });
                                     } else {
                                         // Fallback if booking not found
                                         addMessage(

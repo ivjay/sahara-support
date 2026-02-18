@@ -46,7 +46,8 @@ export async function processMessage(
     userMessage: string,
     currentBooking: BookingState | null,
     allServices: BookingOption[] = [],
-    history: Array<{ role: "user" | "assistant"; content: string }> = []
+    history: Array<{ role: "user" | "assistant"; content: string }> = [],
+    userName?: string
 ): Promise<AgentResponse> {
 
     // ✅ IMPROVED: Handle Payment Verification (Only trigger when user confirms payment)
@@ -94,11 +95,11 @@ export async function processMessage(
     }
 
     // ✅ Call AI - LLM is in FULL CONTROL
-    const aiResponse = await getAgentResponse(userMessage, history);
+    const aiResponse = await getAgentResponse(userMessage, history, userName);
     console.log("[Agent] 🤖 LLM Response:", aiResponse);
 
     // ✅ TRANSLATE if Nepali detected
-    let finalContent = aiResponse.content;
+    let finalContent = aiResponse.content || "I'm here to help! What would you like to do?";
     if (aiResponse.language === 'ne' || isNepaliText(userMessage)) {
         console.log("[Agent] 🌏 Nepali detected - translating response...");
         try {
@@ -117,6 +118,22 @@ export async function processMessage(
 
     // 🛡️ SAFETY NET: Force show_options if LLM forgot
     const msg = userMessage.toLowerCase();
+
+    // 📅 Handle "view my bookings/appointments" directly
+    if (msg.includes('view my') || msg.includes('my booking') || msg.includes('my appointment') ||
+        msg.includes('show my booking') || msg.includes('my meetings') || msg.includes('my reservations')) {
+        return {
+            content: `To see all your bookings and appointments, head to your **Profile** page!\n\nYou'll find:\n- 📅 All upcoming appointments\n- 🚌 Bus & flight reservations\n- 🎬 Movie tickets\n- Full details: date, time, location & status\n\nJust tap the **Profile icon** (top right) to access it. Is there anything else I can help you with?`,
+            quickReplies: ["Book something new", "Reschedule an appointment"],
+            newBookingState: currentBooking
+        };
+    }
+
+    // 🔄 Handle reschedule requests — pass to LLM but add context
+    if (msg.includes('reschedule') || (msg.includes('change') && (msg.includes('appointment') || msg.includes('booking') || msg.includes('time') || msg.includes('date')))) {
+        // LLM will handle this, but ensure we don't accidentally show booking options
+        showOptions = false;
+    }
 
     // Check conversation history for specialty mentions (context-aware)
     const recentHistory = history.slice(-3).map(m => m.content).join(' ').toLowerCase();

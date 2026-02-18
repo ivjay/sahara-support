@@ -281,37 +281,152 @@ export default function ProfilePage() {
 // Bookings Section Component
 function BookingsSection() {
     const { bookings } = useBookings();
+    const [expanded, setExpanded] = useState<string | null>(null);
 
     if (bookings.length === 0) return null;
 
+    const getTypeConfig = (type: string) => {
+        switch (type) {
+            case 'bus': return { emoji: '🚌', color: 'bg-orange-500/10 text-orange-600 border-orange-200', badge: 'bg-orange-50 text-orange-700 border-orange-200', label: 'Bus' };
+            case 'flight': return { emoji: '✈️', color: 'bg-blue-500/10 text-blue-600 border-blue-200', badge: 'bg-blue-50 text-blue-700 border-blue-200', label: 'Flight' };
+            case 'movie': return { emoji: '🎬', color: 'bg-purple-500/10 text-purple-600 border-purple-200', badge: 'bg-purple-50 text-purple-700 border-purple-200', label: 'Movie' };
+            default: return { emoji: '🏥', color: 'bg-green-500/10 text-green-600 border-green-200', badge: 'bg-green-50 text-green-700 border-green-200', label: 'Appointment' };
+        }
+    };
+
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'Confirmed': return 'bg-green-50 text-green-700 border border-green-200';
+            case 'Under Review': return 'bg-yellow-50 text-yellow-700 border border-yellow-200';
+            case 'Cancelled': return 'bg-red-50 text-red-700 border border-red-200';
+            default: return 'bg-gray-50 text-gray-700 border border-gray-200';
+        }
+    };
+
+    const getLocation = (booking: any) => {
+        return booking.subtitle ||
+            booking.details?.hospital ||
+            booking.details?.clinic ||
+            booking.details?.theater ||
+            booking.details?.to ||
+            null;
+    };
+
+    const getTime = (booking: any) => {
+        return booking.details?.time || null;
+    };
+
+    const getSeats = (booking: any) => {
+        if (!booking.details?.seats || booking.details.seats.length === 0) return null;
+        return Array.isArray(booking.details.seats)
+            ? booking.details.seats.join(', ')
+            : booking.details.seats;
+    };
+
+    const getPatients = (booking: any) => {
+        const passengers = booking.details?.passengers || [];
+        return passengers.map((p: any) => p.fullName).filter(Boolean);
+    };
+
     return (
-        <SectionCard title="My Booking History" icon={Ticket}>
+        <SectionCard title="My Bookings & Appointments" icon={Ticket}>
             <div className="space-y-3">
-                {bookings.map((booking) => (
-                    <div key={booking.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border border-border/50 bg-secondary/30 hover:bg-secondary/50 transition-colors gap-3">
-                        <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${booking.type === 'bus' ? 'bg-orange-500/10 text-orange-600' :
-                                    booking.type === 'flight' ? 'bg-blue-500/10 text-blue-600' :
-                                        booking.type === 'movie' ? 'bg-purple-500/10 text-purple-600' :
-                                            'bg-green-500/10 text-green-600'
-                                }`}>
-                                {booking.type === 'bus' ? <span className="text-lg">🚌</span> :
-                                    booking.type === 'flight' ? <span className="text-lg">✈️</span> :
-                                        booking.type === 'movie' ? <span className="text-lg">🎬</span> :
-                                            <span className="text-lg">🏥</span>}
-                            </div>
-                            <div>
-                                <h3 className="font-semibold text-sm">{booking.title}</h3>
-                                <p className="text-xs text-muted-foreground">{booking.subtitle} • {new Date(booking.date).toLocaleDateString()}</p>
-                            </div>
+                {bookings.map((booking) => {
+                    const config = getTypeConfig(booking.type);
+                    const location = getLocation(booking);
+                    const time = getTime(booking);
+                    const seats = getSeats(booking);
+                    const patients = getPatients(booking);
+                    const isExpanded = expanded === booking.id;
+                    const isAppointment = booking.type === 'appointment';
+
+                    return (
+                        <div key={booking.id} className="rounded-xl border border-border/60 overflow-hidden bg-card">
+                            {/* Main Row */}
+                            <button
+                                onClick={() => setExpanded(isExpanded ? null : booking.id)}
+                                className="w-full flex items-center gap-3 p-3 hover:bg-muted/40 transition-colors text-left"
+                            >
+                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border ${config.color}`}>
+                                    <span className="text-lg">{config.emoji}</span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <h3 className="font-semibold text-sm truncate">{booking.title}</h3>
+                                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md border ${config.badge}`}>{config.label}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground flex-wrap">
+                                        <span>📅 {new Date(booking.date).toLocaleDateString()}</span>
+                                        {time && <span>🕐 {time}</span>}
+                                        {location && <span className="truncate">📍 {location}</span>}
+                                    </div>
+                                </div>
+                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${getStatusColor(booking.status)}`}>
+                                        {booking.status}
+                                    </span>
+                                    <span className="text-xs font-bold text-primary">{booking.amount}</span>
+                                </div>
+                            </button>
+
+                            {/* Expanded Details */}
+                            {isExpanded && (
+                                <div className="border-t border-border/40 bg-muted/20 px-4 py-3 space-y-2">
+                                    <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+                                        <div>
+                                            <span className="text-muted-foreground">Booking ID</span>
+                                            <p className="font-mono font-semibold">{booking.id}</p>
+                                        </div>
+                                        {location && (
+                                            <div>
+                                                <span className="text-muted-foreground">{isAppointment ? 'Clinic / Hospital' : 'Location'}</span>
+                                                <p className="font-medium">{location}</p>
+                                            </div>
+                                        )}
+                                        {time && (
+                                            <div>
+                                                <span className="text-muted-foreground">Time</span>
+                                                <p className="font-medium">{time}</p>
+                                            </div>
+                                        )}
+                                        {seats && (
+                                            <div>
+                                                <span className="text-muted-foreground">Seats</span>
+                                                <p className="font-medium">{seats}</p>
+                                            </div>
+                                        )}
+                                        {patients.length > 0 && (
+                                            <div className="col-span-2">
+                                                <span className="text-muted-foreground">{isAppointment ? 'Patient(s)' : 'Passenger(s)'}</span>
+                                                <p className="font-medium">{patients.join(', ')}</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Action buttons */}
+                                    <div className="flex gap-2 pt-2">
+                                        {isAppointment && booking.status === 'Confirmed' && (
+                                            <a
+                                                href="/chat"
+                                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                                            >
+                                                <Calendar className="w-3 h-3" />
+                                                Reschedule
+                                            </a>
+                                        )}
+                                        <a
+                                            href="/chat"
+                                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-border rounded-lg hover:bg-muted transition-colors"
+                                        >
+                                            <ExternalLink className="w-3 h-3" />
+                                            Get Help
+                                        </a>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                        <div className="flex items-center gap-3 justify-end">
-                            <span className="text-xs font-bold px-2 py-1 bg-green-500/10 text-green-600 rounded-md border border-green-500/20">
-                                {booking.status}
-                            </span>
-                        </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </SectionCard>
     );

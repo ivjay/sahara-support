@@ -16,6 +16,8 @@ interface ReceiptProps {
         time: string;
         seats?: string;
         passengers?: number;
+        passengerNames?: string[];
+        serviceType?: string;
         price: string;
         status: "Confirmed" | "Pending" | "Under Review" | "Cancelled";
         userName: string;
@@ -226,11 +228,22 @@ export function Receipt({ data }: ReceiptProps) {
                             </div>
                         )}
 
-                        {/* Passengers */}
+                        {/* Passengers / Patients */}
                         {data.passengers && (
                             <div className="flex justify-between border-b border-dashed pb-3">
-                                <span className="text-muted-foreground">Passengers</span>
+                                <span className="text-muted-foreground">
+                                    {data.serviceType === 'appointment' ? 'Patient(s)' : 'Passengers'}
+                                </span>
                                 <span className="font-medium text-right">{data.passengers} {data.passengers === 1 ? 'Person' : 'People'}</span>
+                            </div>
+                        )}
+                        {/* Patient/Passenger names if available */}
+                        {data.passengerNames && data.passengerNames.length > 0 && (
+                            <div className="flex justify-between border-b border-dashed pb-3">
+                                <span className="text-muted-foreground">
+                                    {data.serviceType === 'appointment' ? 'Patient' : 'Traveller(s)'}
+                                </span>
+                                <span className="font-medium text-right text-xs">{data.passengerNames.join(', ')}</span>
                             </div>
                         )}
 

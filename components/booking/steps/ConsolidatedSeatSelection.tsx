@@ -19,6 +19,7 @@ interface ConsolidatedSeatSelectionProps {
     passengers: PassengerInfo[];
     selectedSeats: string[];
     sessionId: string;
+    serviceType?: 'movie' | 'bus' | 'flight' | 'appointment';
     userProfile?: {
         name?: string;
         phone?: string;
@@ -31,6 +32,14 @@ interface ConsolidatedSeatSelectionProps {
     onReserveFailure: (failedSeats: string[]) => void;
 }
 
+// Map service type to venue type for correct seat layout display
+const SERVICE_TYPE_TO_VENUE_TYPE: Record<string, string> = {
+    movie: 'cinema_hall',
+    bus: 'bus',
+    flight: 'flight',
+    appointment: 'clinic'
+};
+
 export function ConsolidatedSeatSelection({
     venueId,
     serviceId,
@@ -40,6 +49,7 @@ export function ConsolidatedSeatSelection({
     passengers,
     selectedSeats,
     sessionId,
+    serviceType,
     userProfile,
     onPassengerCountChange,
     onPassengerChange,
@@ -198,7 +208,9 @@ export function ConsolidatedSeatSelection({
             <Card className="p-6 border-2">
                 <div className="flex items-center gap-3 mb-4">
                     <Users className="w-5 h-5 text-primary" />
-                    <Label className="text-lg font-semibold">Number of Passengers</Label>
+                    <Label className="text-lg font-semibold">
+                        {serviceType === 'appointment' ? 'Number of Patients' : 'Number of Passengers'}
+                    </Label>
                 </div>
                 <div className="flex items-center justify-center gap-4">
                     <Button
@@ -224,7 +236,9 @@ export function ConsolidatedSeatSelection({
                     </Button>
                 </div>
                 <p className="text-center text-sm text-muted-foreground mt-3">
-                    Select seats for {passengerCount} {passengerCount === 1 ? 'person' : 'people'}
+                    {serviceType === 'appointment'
+                        ? `Booking for ${passengerCount} ${passengerCount === 1 ? 'patient' : 'patients'}`
+                        : `Select seats for ${passengerCount} ${passengerCount === 1 ? 'person' : 'people'}`}
                 </p>
             </Card>
 
@@ -244,7 +258,7 @@ export function ConsolidatedSeatSelection({
                     rows={venueRows}
                     selectedSeats={selectedSeats}
                     onSeatClick={handleSeatClick}
-                    venueType={venue?.venue_type}
+                    venueType={serviceType ? SERVICE_TYPE_TO_VENUE_TYPE[serviceType] : venue?.venue_type}
                 />
 
                 {/* Legend */}
@@ -279,7 +293,7 @@ export function ConsolidatedSeatSelection({
                                     {index + 1}
                                 </div>
                                 <span className="font-medium">
-                                    Passenger {index + 1}
+                                    {serviceType === 'appointment' ? 'Patient' : 'Passenger'} {index + 1}
                                     {index === 0 && ' (Primary Contact)'}
                                 </span>
                             </div>

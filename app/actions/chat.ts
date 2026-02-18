@@ -10,7 +10,7 @@ import {
     MOCK_MOVIE_OPTIONS
 } from "@/lib/chat/mock-data";
 import { chat as ollamaChat } from "@/lib/integrations/ollama-service";
-import { SAHARA_SYSTEM_PROMPT, parseBookingResponse } from "@/lib/chat/sahara-prompt-conversational";
+import { getPersonalizedPrompt, parseBookingResponse } from "@/lib/chat/sahara-prompt-conversational";
 
 export interface AgentResponseAPIType {
     success: boolean;
@@ -111,13 +111,14 @@ async function getRelevantServices(userMessage: string, history: Array<{ role: s
 export async function sendMessage(
     userMessage: string,
     conversationId: string,
-    conversationHistory: Array<{ role: "user" | "assistant"; content: string }>
+    conversationHistory: Array<{ role: "user" | "assistant"; content: string }>,
+    userName?: string
 ): Promise<AgentResponseAPIType> {
     try {
         console.log(`[Chat] Processing: "${userMessage}"`);
 
         const relevantServices = await getRelevantServices(userMessage, conversationHistory);
-        const agentResponse = await processMessage(userMessage, null, relevantServices, conversationHistory);
+        const agentResponse = await processMessage(userMessage, null, relevantServices, conversationHistory, userName);
 
         const finalConversationId = conversationId || `CONV-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`;
 
@@ -256,15 +257,23 @@ async function checkOllamaHealth(): Promise<boolean> {
 
 export async function getAgentResponse(
     userMessage: string,
-    conversationHistory: Array<{ role: "user" | "assistant"; content: string }>
+    conversationHistory: Array<{ role: "user" | "assistant"; content: string }>,
+    userName?: string
 ) {
     // Quick health check before attempting Ollama call
     const isHealthy = await checkOllamaHealth();
 
     if (!isHealthy) {
         console.log("[Chat] ⚠️ Ollama unavailable, using fallback");
+        const msg = userMessage.toLowerCase();
+        // Smart fallback: detect intent even without LLM
+        const isReschedule = msg.includes('reschedule') || msg.includes('change') && (msg.includes('appointment') || msg.includes('booking'));
+        const isViewBookings = msg.includes('my booking') || msg.includes('my appointment') || msg.includes('view my');
+        let fallbackContent = "I'm here to help! What would you like to book today?";
+        if (isReschedule) fallbackContent = "To reschedule, please share your Booking ID (starts with BK-) and your preferred new date/time.";
+        else if (isViewBookings) fallbackContent = "You can view all your bookings and appointments in your **Profile** page. Tap the profile icon at the top right!";
         return {
-            content: "I can help you with bookings. What service would you like to book?",
+            content: fallbackContent,
             stage: "gathering",
             language: "en",
             booking_type: null,
@@ -272,7 +281,7 @@ export async function getAgentResponse(
             showOptions: null as import("@/lib/chat/types").Intent | null,
             optionType: null,
             filterCategory: null as string | null,
-            quickReplies: [] as string[]
+            quickReplies: isViewBookings ? [] : isReschedule ? [] : ["Book a bus", "Find a doctor", "Movie tickets"] as string[]
         };
     }
 
@@ -280,7 +289,7 @@ export async function getAgentResponse(
         console.log("[Chat] 🦙 Calling Ollama...");
 
         const messages = [
-            { role: "system" as const, content: SAHARA_SYSTEM_PROMPT },
+            { role: "system" as const, content: getPersonalizedPrompt(userName) },
             ...conversationHistory,
             { role: "user" as const, content: userMessage }
         ];
@@ -296,7 +305,7 @@ export async function getAgentResponse(
         ollamaHealthy = true; // Mark as healthy if successful
 
         return {
-            content: parsed.message,
+            content: parsed.message || "I'm here to help! What would you like to do?",
             stage: parsed.stage,
             language: parsed.language,
             booking_type: parsed.booking_type,
@@ -312,7 +321,7 @@ export async function getAgentResponse(
         ollamaHealthy = false; // Mark as unhealthy
 
         return {
-            content: "I can help you with bookings. What service would you like to book?",
+            content: "Sorry, I had a little hiccup there! I'm still here to help — what would you like to do?",
             stage: "gathering",
             language: "en",
             booking_type: null,
@@ -320,7 +329,7 @@ export async function getAgentResponse(
             showOptions: null as import("@/lib/chat/types").Intent | null,
             optionType: null,
             filterCategory: null as string | null,
-            quickReplies: [] as string[]
+            quickReplies: ["Book a bus", "Find a doctor", "Movie tickets"] as string[]
         };
     }
 }
