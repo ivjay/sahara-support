@@ -7,10 +7,12 @@ import {
     ReactNode,
     useCallback,
     useEffect,
+    useMemo,
 } from "react";
 import {
     ChatState,
     ChatAction,
+    ChatSession,
     Message,
     BookingState,
     MessageRole,
@@ -18,22 +20,29 @@ import {
 import { generateId } from "./utils";
 import { CURRENT_USER, UserProfile } from "@/lib/user-context";
 import { useAuth } from "@/lib/auth-context";
+import { getProfile, updateProfile as supabaseUpdateProfile } from "@/lib/supabase";
 
 // Initial state
 const initialState: ChatState = {
     messages: [],
     isLoading: false,
     currentBooking: null,
+    wizardState: null,
     userId: "demo-user",
     sessions: [],
     userProfile: undefined, // Will be populated from Firebase auth
 };
 
-const STORAGE_KEY = "sahara_chat_history_v1";
+const STORAGE_KEY_PREFIX = "sahara_chat_v2_";
 
 // Reducer function
-function chatReducer(state: ChatState, action: ChatAction | { type: "REHYDRATE", payload: ChatState } | { type: "UPDATE_PROFILE", payload: UserProfile }): ChatState {
+function chatReducer(state: ChatState, action: ChatAction | { type: "REHYDRATE", payload: ChatState } | { type: "UPDATE_PROFILE", payload: UserProfile } | { type: "SET_USER_ID", payload: string }): ChatState {
     switch (action.type) {
+        case "SET_USER_ID":
+            return {
+                ...state,
+                userId: action.payload
+            };
         case "UPDATE_PROFILE":
             return {
                 ...state,
@@ -41,12 +50,15 @@ function chatReducer(state: ChatState, action: ChatAction | { type: "REHYDRATE",
             };
 
         case "REHYDRATE":
-            return action.payload;
+            return {
+                ...state,
+                ...action.payload,
+                // Ensure we don't accidentally overwrite the userProfile if rehydrating from a broad state
+            };
 
         case "ARCHIVE_SESSION":
             if (state.messages.length === 0) return state;
 
-            // Generate Title
             const lastMsg = state.messages[state.messages.length - 1];
             const firstUserMsg = state.messages.find(m => m.role === 'user');
 
@@ -54,11 +66,10 @@ function chatReducer(state: ChatState, action: ChatAction | { type: "REHYDRATE",
             if (state.currentBooking?.intent && state.currentBooking.intent !== 'UNKNOWN') {
                 title = state.currentBooking.intent.replace('_BOOKING', '').toLowerCase().replace(/^\w/, c => c.toUpperCase()) + " Booking";
             } else if (firstUserMsg) {
-                // Truncate first message
                 title = firstUserMsg.content.slice(0, 18) + (firstUserMsg.content.length > 18 ? "..." : "");
             }
 
-            const newSession: any = { // Use 'any' temporarily to avoid circular dep issues with ChatSession interface if not fully recognized yet
+            const newSession: ChatSession = {
                 id: generateId(),
                 title: title,
                 date: new Date(),
@@ -78,17 +89,10 @@ function chatReducer(state: ChatState, action: ChatAction | { type: "REHYDRATE",
             const sessionToLoad = state.sessions.find(s => s.id === action.payload);
             if (!sessionToLoad) return state;
 
-            // If we have an active unsaved session, should we archive it first?
-            // For simplicity, we'll just switch. Ideally we'd auto-archive active if not empty.
-            // Let's safe-guard: if current messages > 0, archive them first? 
-            // That requires multiple state updates. 
-            // Let's assume the UI handles "New Chat" (Archive) before Load.
-
             return {
                 ...state,
                 messages: sessionToLoad.messages,
                 currentBooking: sessionToLoad.bookingState || null,
-                // Move loaded session to top? Optional.
             };
 
         case "DELETE_SESSION":
@@ -138,7 +142,20 @@ function chatReducer(state: ChatState, action: ChatAction | { type: "REHYDRATE",
             return {
                 ...state,
                 messages: [],
-                currentBooking: null
+                currentBooking: null,
+                wizardState: null
+            };
+
+        case "SET_WIZARD_STATE":
+            return {
+                ...state,
+                wizardState: action.payload
+            };
+
+        case "UPDATE_WIZARD_STATE_FUNCTIONAL":
+            return {
+                ...state,
+                wizardState: action.payload(state.wizardState)
             };
 
         default:
@@ -153,10 +170,11 @@ interface ChatContextType {
     setLoading: (loading: boolean) => void;
     setBooking: (booking: BookingState | null) => void;
     updateBookingData: (data: Record<string, string>) => void;
-    updateUserProfile: (profile: UserProfile) => void;
+    updateUserProfile: (profile: UserProfile) => Promise<void>;
     clearChat: () => void;
     loadSession: (id: string) => void;
     deleteSession: (id: string) => void;
+    setWizardState: (state: ChatState["wizardState"] | ((prev: ChatState["wizardState"]) => ChatState["wizardState"])) => void;
 }
 
 // Create context
@@ -171,112 +189,165 @@ export function ChatProvider({ children }: ChatProviderProps) {
     const [state, dispatch] = useReducer(chatReducer, initialState);
     const { user, isGuest } = useAuth();
 
-    // Update user profile when Firebase user changes
+    // Derived storage key based on user ID to isolate history
+    const effectiveUserId = isGuest ? "guest" : (user?.uid || "guest");
+    const USER_STORAGE_KEY = `${STORAGE_KEY_PREFIX}${effectiveUserId}`;
+
+    // 1. Sync Profile from Supabase on Auth Change
     useEffect(() => {
-        if (user && !isGuest) {
-            // ✅ FIX: Create profile from Firebase auth data only, no hardcoded defaults
-            const userName = user.displayName || user.email?.split('@')[0] || "User";
-            const firstName = user.displayName?.split(' ')[0] || user.email?.split('@')[0] || "there";
+        async function syncProfile() {
+            if (user && !isGuest) {
+                dispatch({ type: "SET_USER_ID", payload: user.uid });
 
-            const userProfile: UserProfile = {
-                // Identity from Firebase
-                id: user.uid,
-                name: userName,
-                firstName: firstName,
-                email: user.email || "",
-                phone: user.phoneNumber || "",
-                avatarInitials: userName.substring(0, 2).toUpperCase(),
+                try {
+                    // Fetch existing profile from Supabase
+                    const dbProfile = await getProfile(user.uid);
 
-                // Generic defaults (not Bijay's data!)
-                alternatePhone: "",
-                dateOfBirth: "",
-                gender: "",
-                nationality: "",
-                idNumber: "",
-                currentAddress: "",
-                permanentAddress: "",
-                city: "Kathmandu",
-                postalCode: "",
-                emergencyName: "",
-                emergencyPhone: "",
-                emergencyRelation: "",
-                kycStatus: "Not Started",
-                accountType: "Free",
-                memberSince: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-                preferences: []
-            };
-            dispatch({ type: "UPDATE_PROFILE", payload: userProfile });
-        } else if (isGuest) {
-            // Guest mode - use generic profile
-            const guestProfile: UserProfile = {
-                id: "guest",
-                name: "Guest",
-                firstName: "Guest",
-                email: "",
-                phone: "",
-                alternatePhone: "",
-                avatarInitials: "G",
-                dateOfBirth: "",
-                gender: "",
-                nationality: "",
-                idNumber: "",
-                currentAddress: "",
-                permanentAddress: "",
-                city: "Kathmandu",
-                postalCode: "",
-                emergencyName: "",
-                emergencyPhone: "",
-                emergencyRelation: "",
-                kycStatus: "Not Started",
-                accountType: "Free",
-                memberSince: "Guest",
-                preferences: []
-            };
-            dispatch({ type: "UPDATE_PROFILE", payload: guestProfile });
+                    const userName = user.displayName || user.email?.split('@')[0] || "User";
+                    const firstName = user.displayName?.split(' ')[0] || user.email?.split('@')[0] || "there";
+
+                    const baseProfile: UserProfile = {
+                        id: user.uid,
+                        name: dbProfile?.full_name || userName,
+                        firstName: dbProfile?.first_name || firstName,
+                        email: user.email || "",
+                        phone: dbProfile?.phone || user.phoneNumber || "",
+                        avatarInitials: (dbProfile?.full_name || userName || "U").substring(0, 2).toUpperCase(),
+                        alternatePhone: dbProfile?.alternate_phone || "",
+                        dateOfBirth: dbProfile?.date_of_birth || "",
+                        gender: dbProfile?.gender || "",
+                        nationality: dbProfile?.nationality || "Nepali",
+                        idNumber: dbProfile?.id_number || "",
+                        currentAddress: dbProfile?.current_address || "",
+                        permanentAddress: dbProfile?.permanent_address || "",
+                        city: dbProfile?.city || "Kathmandu",
+                        postalCode: dbProfile?.postal_code || "",
+                        emergencyName: dbProfile?.emergency_name || "",
+                        emergencyPhone: dbProfile?.emergency_phone || "",
+                        emergencyRelation: dbProfile?.emergency_relation || "",
+                        kycStatus: dbProfile?.kyc_status || "Not Started",
+                        accountType: dbProfile?.account_type || "Free",
+                        memberSince: dbProfile?.created_at ? new Date(dbProfile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+                        preferences: dbProfile?.preferences || []
+                    };
+
+                    dispatch({ type: "UPDATE_PROFILE", payload: baseProfile });
+                } catch (err) {
+                    console.error("[ChatProvider] Profile fetch failed:", err);
+                }
+            } else if (isGuest) {
+                dispatch({ type: "SET_USER_ID", payload: "guest" });
+                const guestProfile: UserProfile = {
+                    id: "guest",
+                    name: "Guest",
+                    firstName: "Guest",
+                    email: "",
+                    phone: "",
+                    alternatePhone: "",
+                    avatarInitials: "G",
+                    dateOfBirth: "",
+                    gender: "",
+                    nationality: "",
+                    idNumber: "",
+                    currentAddress: "",
+                    permanentAddress: "",
+                    city: "Kathmandu",
+                    postalCode: "",
+                    emergencyName: "",
+                    emergencyPhone: "",
+                    emergencyRelation: "",
+                    kycStatus: "Not Started",
+                    accountType: "Free",
+                    memberSince: "Guest",
+                    preferences: []
+                };
+                dispatch({ type: "UPDATE_PROFILE", payload: guestProfile });
+            }
         }
+
+        syncProfile();
     }, [user, isGuest]);
 
-    // Load from localStorage on mount
+    // 2. Load from user-specific localStorage on mount or user change
     useEffect(() => {
-        const saved = localStorage.getItem(STORAGE_KEY);
+        const saved = localStorage.getItem(USER_STORAGE_KEY);
+
+        // GUEST TO USER MIGRATION: 
+        // If we just logged in (effectiveUserId is not "guest") but there is no saved data for this user,
+        // check if there is saved data for "guest" and migrate it.
+        if (!saved && effectiveUserId !== "guest") {
+            const guestData = localStorage.getItem(`${STORAGE_KEY_PREFIX}guest`);
+            if (guestData) {
+                console.log("[ChatProvider] 🚚 Migrating guest history to user:", effectiveUserId);
+                localStorage.setItem(USER_STORAGE_KEY, guestData);
+                // Optionally clear guest data? 
+                // localStorage.removeItem(`${STORAGE_KEY_PREFIX}guest`);
+
+                // Now reload from the newly created user key
+                const freshSaved = localStorage.getItem(USER_STORAGE_KEY);
+                if (freshSaved) {
+                    try {
+                        const parsed = JSON.parse(freshSaved);
+                        parsed.messages = (parsed.messages || []).map((m: Record<string, unknown>) => ({
+                            ...m,
+                            timestamp: new Date(m.timestamp as string)
+                        }));
+                        parsed.sessions = (parsed.sessions || []).map((s: Record<string, unknown>) => ({
+                            ...s,
+                            date: new Date(s.date as string),
+                            messages: ((s.messages || []) as Record<string, unknown>[]).map((m: Record<string, unknown>) => ({
+                                ...m,
+                                timestamp: new Date(m.timestamp as string)
+                            }))
+                        }));
+                        dispatch({ type: "REHYDRATE", payload: { ...parsed, userId: effectiveUserId } });
+                        return; // Done
+                    } catch (e) {
+                        console.error("Failed to migrate guest data", e);
+                    }
+                }
+            }
+        }
+
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                // Restore Dates
-                parsed.messages = parsed.messages.map((m: any) => ({
+                parsed.messages = (parsed.messages || []).map((m: Record<string, unknown>) => ({
                     ...m,
-                    timestamp: new Date(m.timestamp)
+                    timestamp: new Date(m.timestamp as string)
                 }));
-                // Restore Sessions Dates
-                parsed.sessions = (parsed.sessions || []).map((s: any) => ({
+                parsed.sessions = (parsed.sessions || []).map((s: Record<string, unknown>) => ({
                     ...s,
-                    date: new Date(s.date),
-                    messages: s.messages.map((m: any) => ({
+                    date: new Date(s.date as string),
+                    messages: ((s.messages || []) as Record<string, unknown>[]).map((m: Record<string, unknown>) => ({
                         ...m,
-                        timestamp: new Date(m.timestamp)
+                        timestamp: new Date(m.timestamp as string)
                     }))
                 }));
 
-                // Don't restore userProfile from localStorage - it will be set from Firebase auth
-
-                dispatch({ type: "REHYDRATE", payload: parsed });
+                // Rehydrate but PRESERVE the current userProfile we just got from DB
+                dispatch({ type: "REHYDRATE", payload: { ...parsed, userId: effectiveUserId } });
             } catch (e) {
-                console.error("Failed to load chat history", e);
+                console.error("Failed to load user chat history", e);
             }
+        } else {
+            // New user or no history for THIS identity, clear current session
+            dispatch({ type: "CLEAR_CHAT" });
         }
-    }, []);
+    }, [effectiveUserId, USER_STORAGE_KEY]);
 
-    // Save to localStorage on change
+    // 3. Save to user-specific localStorage on change
     useEffect(() => {
         const hasData = state.messages.length > 0 ||
             state.sessions.length > 0 ||
-            state.currentBooking !== null ||
-            state.userProfile !== undefined;
+            state.currentBooking !== null;
 
         if (hasData) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            // Save everything EXCEPT the userProfile (which comes from DB) to avoid stale data
+            const { userProfile, ...persistState } = state;
+            localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(persistState));
         }
-    }, [state]);
+    }, [state, USER_STORAGE_KEY]);
 
     // Add a new message
     const addMessage = useCallback(
@@ -309,10 +380,36 @@ export function ChatProvider({ children }: ChatProviderProps) {
         dispatch({ type: "UPDATE_BOOKING_DATA", payload: data });
     }, []);
 
-    // Update user profile
-    const updateUserProfile = useCallback((profile: UserProfile) => {
+    // Update user profile with Supabase sync
+    const updateUserProfile = useCallback(async (profile: UserProfile) => {
         dispatch({ type: "UPDATE_USER_PROFILE", payload: profile });
-    }, []);
+
+        const effectiveUserId = isGuest ? "guest" : (user?.uid || "guest");
+        if (effectiveUserId !== 'guest') {
+            try {
+                await supabaseUpdateProfile(effectiveUserId, {
+                    full_name: profile.name,
+                    first_name: profile.firstName,
+                    phone: profile.phone,
+                    date_of_birth: profile.dateOfBirth,
+                    gender: profile.gender,
+                    nationality: profile.nationality,
+                    id_number: profile.idNumber,
+                    current_address: profile.currentAddress,
+                    permanent_address: profile.permanentAddress,
+                    city: profile.city,
+                    postal_code: profile.postalCode,
+                    emergency_name: profile.emergencyName,
+                    emergency_phone: profile.emergencyPhone,
+                    emergency_relation: profile.emergencyRelation,
+                    preferences: profile.preferences || []
+                });
+                console.log("[ChatContext] ✓ Profile synced to Supabase");
+            } catch (error) {
+                console.error("[ChatContext] ✗ Failed to sync profile:", error);
+            }
+        }
+    }, [isGuest, user?.uid]);
 
     // Clear all messages (Archive first)
     const clearChat = useCallback(() => {
@@ -338,7 +435,17 @@ export function ChatProvider({ children }: ChatProviderProps) {
         dispatch({ type: "DELETE_SESSION", payload: id });
     }, []);
 
-    const value: ChatContextType = {
+    const setWizardState = useCallback((wizardState: ChatState["wizardState"] | ((prev: ChatState["wizardState"]) => ChatState["wizardState"])) => {
+        if (typeof wizardState === 'function') {
+            // We need to access the current state. Since this is in the provider, we can use a ref or just rely on dispatch handling it if we added a new action type.
+            // But easier is to just add a functional update action to the reducer.
+            dispatch({ type: "UPDATE_WIZARD_STATE_FUNCTIONAL", payload: wizardState });
+        } else {
+            dispatch({ type: "SET_WIZARD_STATE", payload: wizardState });
+        }
+    }, []);
+
+    const value = useMemo(() => ({
         state,
         addMessage,
         setLoading,
@@ -348,7 +455,19 @@ export function ChatProvider({ children }: ChatProviderProps) {
         clearChat,
         loadSession,
         deleteSession,
-    };
+        setWizardState,
+    }), [
+        state,
+        addMessage,
+        setLoading,
+        setBooking,
+        updateBookingData,
+        updateUserProfile,
+        clearChat,
+        loadSession,
+        deleteSession,
+        setWizardState,
+    ]);
 
     return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 }

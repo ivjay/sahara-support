@@ -91,10 +91,10 @@ export async function POST(request: NextRequest) {
             formData: paymentResponse.formData,
             gateway
         });
-    } catch (error: any) {
+    } catch (error) {
         console.error('[Payment API] Error:', error);
         return NextResponse.json(
-            { error: error.message || 'Internal server error' },
+            { error: error instanceof Error ? error.message : 'Internal server error' },
             { status: 500 }
         );
     }

@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(
             new URL(`/payment/success?bookingId=${payment.booking_id}&transactionId=${verificationResult.transactionId}`, request.url)
         );
-    } catch (error: any) {
+    } catch (error) {
         console.error('[Khalti Callback] Error:', error);
         return NextResponse.redirect(
             new URL('/payment/failed?reason=server_error', request.url)

@@ -1,7 +1,12 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { QUICK_ACTIONS } from "@/lib/chat/mock-data";
+const QUICK_ACTIONS = [
+    "Book a bus ticket",
+    "Find flights",
+    "Doctor appointment",
+    "Movie tickets",
+];
 
 interface QuickActionsProps {
     onSelect: (action: string) => void;

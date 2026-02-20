@@ -1,5 +1,7 @@
+import type { BookingOption } from '@/lib/chat/types';
+
 // Helper to determine if a service needs the booking wizard
-export function needsWizard(service: any): boolean {
+export function needsWizard(service: BookingOption): boolean {
     // Services with venue IDs need seat selection
     if (service.venueId) return true;
 
@@ -13,7 +15,7 @@ export function needsWizard(service: any): boolean {
 }
 
 // Helper to determine service type from booking option
-export function getServiceType(service: any): 'movie' | 'bus' | 'flight' | 'appointment' {
+export function getServiceType(service: BookingOption): 'movie' | 'bus' | 'flight' | 'appointment' {
     if (service.type === 'movie') return 'movie';
     if (service.type === 'bus') return 'bus';
     if (service.type === 'flight') return 'flight';

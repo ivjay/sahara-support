@@ -47,6 +47,45 @@ export function Receipt({ data }: ReceiptProps) {
                 useCORS: true,
                 logging: false,
                 allowTaint: true,
+                // Fix: html2canvas can't parse oklch()/lab() colors.
+                // Optimized color conversion - only process necessary properties
+                onclone: (_doc: Document, clonedEl: HTMLElement) => {
+                    const allElements = [clonedEl, ...Array.from(clonedEl.querySelectorAll('*'))] as HTMLElement[];
+
+                    // Color properties that need conversion
+                    const colorProps = ['color', 'background-color', 'border-color'];
+                    const specialColorFormats = /oklch|lab|oklab|lch/;
+
+                    for (const el of allElements) {
+                        const computed = window.getComputedStyle(el);
+
+                        // Fast path: directly set most common color properties
+                        el.style.color = computed.color;
+                        el.style.backgroundColor = computed.backgroundColor;
+                        el.style.borderColor = computed.borderColor;
+
+                        // Only check additional properties if needed (rare case)
+                        const hasBorderColor = computed.borderTopColor !== computed.borderColor ||
+                                             computed.borderRightColor !== computed.borderColor ||
+                                             computed.borderBottomColor !== computed.borderColor ||
+                                             computed.borderLeftColor !== computed.borderColor;
+
+                        if (hasBorderColor) {
+                            el.style.borderTopColor = computed.borderTopColor;
+                            el.style.borderRightColor = computed.borderRightColor;
+                            el.style.borderBottomColor = computed.borderBottomColor;
+                            el.style.borderLeftColor = computed.borderLeftColor;
+                        }
+
+                        // Check for special color formats only when detected
+                        for (const prop of colorProps) {
+                            const val = computed.getPropertyValue(prop);
+                            if (val && specialColorFormats.test(val)) {
+                                el.style.setProperty(prop, val);
+                            }
+                        }
+                    }
+                },
             });
 
             return new Promise((resolve, reject) => {
@@ -143,8 +182,8 @@ export function Receipt({ data }: ReceiptProps) {
             await navigator.clipboard.writeText(text);
             alert("✅ Receipt details copied to clipboard!\n\nYou can now paste it in any app.");
             console.log("✅ Receipt copied to clipboard!");
-        } catch (err: any) {
-            if (err?.name === "AbortError") {
+        } catch (err) {
+            if (err instanceof Error && err.name === "AbortError") {
                 console.log("ℹ️ User cancelled share");
             } else {
                 console.error("[Receipt] Share failed:", err);
@@ -158,16 +197,14 @@ export function Receipt({ data }: ReceiptProps) {
     return (
         <Card className="w-full max-w-sm mx-auto shadow-lg border-t-4 border-t-primary overflow-hidden">
             <div ref={receiptRef}>
-                <div className={`p-6 text-center ${
-                    data.status === 'Confirmed' ? 'bg-green-50 dark:bg-green-950/20' :
-                    data.status === 'Under Review' ? 'bg-yellow-50 dark:bg-yellow-950/20' :
-                    'bg-primary/5'
-                }`}>
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${
-                        data.status === 'Confirmed' ? 'bg-green-100' :
-                        data.status === 'Under Review' ? 'bg-yellow-100' :
-                        'bg-blue-100'
+                <div className={`p-6 text-center ${data.status === 'Confirmed' ? 'bg-green-50 dark:bg-green-950/20' :
+                        data.status === 'Under Review' ? 'bg-yellow-50 dark:bg-yellow-950/20' :
+                            'bg-primary/5'
                     }`}>
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${data.status === 'Confirmed' ? 'bg-green-100' :
+                            data.status === 'Under Review' ? 'bg-yellow-100' :
+                                'bg-blue-100'
+                        }`}>
                         {data.status === 'Confirmed' ? (
                             <CheckCircle2 className="w-6 h-6 text-green-600" />
                         ) : data.status === 'Under Review' ? (
@@ -178,8 +215,8 @@ export function Receipt({ data }: ReceiptProps) {
                     </div>
                     <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                         {data.status === 'Confirmed' ? 'Booking Confirmed!' :
-                         data.status === 'Under Review' ? 'Payment Under Review' :
-                         'Booking Received'}
+                            data.status === 'Under Review' ? 'Payment Under Review' :
+                                'Booking Received'}
                     </h2>
                     <p className="text-sm text-muted-foreground mt-1">Receipt ID: {data.id}</p>
                 </div>
@@ -204,17 +241,30 @@ export function Receipt({ data }: ReceiptProps) {
                     <div className="space-y-4 text-sm">
                         {/* Service Details */}
                         <div className="flex justify-between border-b border-dashed pb-3">
-                            <span className="text-muted-foreground">Service</span>
+                            <span className="text-muted-foreground">
+                                {data.serviceType === 'bus' || data.serviceType === 'flight' ? 'Service' :
+                                 data.serviceType === 'movie' ? 'Movie' :
+                                 data.serviceType === 'appointment' ? 'Doctor' : 'Service'}
+                            </span>
                             <span className="font-medium text-right">{data.serviceName}</span>
                         </div>
 
                         <div className="flex justify-between border-b border-dashed pb-3">
-                            <span className="text-muted-foreground">Provider</span>
-                            <span className="font-medium text-right">{data.location}</span>
+                            <span className="text-muted-foreground">
+                                {data.serviceType === 'bus' || data.serviceType === 'flight' ? 'Route' :
+                                 data.serviceType === 'movie' ? 'Cinema' :
+                                 data.serviceType === 'appointment' ? 'Hospital' : 'Location'}
+                            </span>
+                            <span className="font-medium text-right font-semibold text-primary">
+                                {data.location || 'Not specified'}
+                            </span>
                         </div>
 
                         <div className="flex justify-between border-b border-dashed pb-3">
-                            <span className="text-muted-foreground">Date & Time</span>
+                            <span className="text-muted-foreground">
+                                {data.serviceType === 'movie' ? 'Showtime' :
+                                 data.serviceType === 'appointment' ? 'Appointment' : 'Date & Time'}
+                            </span>
                             <span className="font-medium text-right">
                                 {data.date} &bull; {data.time}
                             </span>

@@ -76,10 +76,11 @@ export async function GET() {
         } else {
             health.checks.supabase.connected = true;
         }
-    } catch (error: any) {
+    } catch (error) {
+        const errMsg = error instanceof Error ? error.message : String(error);
         health.checks.supabase.connected = false;
-        health.checks.supabase.error = error.message;
-        health.warnings.push(`Supabase test failed: ${error.message}`);
+        health.checks.supabase.error = errMsg;
+        health.warnings.push(`Supabase test failed: ${errMsg}`);
     }
 
     return NextResponse.json(health);

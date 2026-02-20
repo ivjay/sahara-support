@@ -6,7 +6,8 @@ import {
     useState,
     useEffect,
     ReactNode,
-    useCallback
+    useCallback,
+    useMemo
 } from "react";
 import { BookingApi } from "./booking-api";
 
@@ -85,17 +86,24 @@ export function BookingProvider({ children }: { children: ReactNode }) {
         }
     }, [refreshBookings]);
 
+    const value = useMemo(() => ({
+        bookings,
+        isLoading,
+        addBooking,
+        deleteBooking,
+        updateBooking,
+        refreshBookings
+    }), [
+        bookings,
+        isLoading,
+        addBooking,
+        deleteBooking,
+        updateBooking,
+        refreshBookings
+    ]);
+
     return (
-        <BookingContext.Provider
-            value={{
-                bookings,
-                isLoading,
-                addBooking,
-                deleteBooking,
-                updateBooking,
-                refreshBookings
-            }}
-        >
+        <BookingContext.Provider value={value}>
             {children}
         </BookingContext.Provider>
     );

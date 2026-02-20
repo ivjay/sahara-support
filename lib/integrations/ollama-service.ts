@@ -43,9 +43,10 @@ export interface OllamaChatResponse {
 async function httpRequest(
     url: string,
     method: string = 'GET',
-    body?: any,
-    headers?: Record<string, string>
-): Promise<any> {
+    body?: unknown,
+    headers?: Record<string, string>,
+    signal?: AbortSignal
+): Promise<unknown> {
     return new Promise((resolve, reject) => {
         const urlObj = new URL(url);
         const options = {
@@ -57,7 +58,12 @@ async function httpRequest(
                 'Content-Type': 'application/json',
                 ...headers,
             },
+            signal, // ✅ Node.js 18+ http.request supports signals
         };
+
+        if (signal?.aborted) {
+            return reject(new Error('Request aborted'));
+        }
 
         const req = http.request(options, (res) => {
             let data = '';
@@ -93,7 +99,11 @@ async function httpRequest(
         });
 
         req.on('error', (error) => {
-            console.error('[Ollama] HTTP Request Error:', error);
+            if (error.name === 'AbortError') {
+                console.log('[Ollama] Request aborted by user');
+            } else {
+                console.error('[Ollama] HTTP Request Error:', error);
+            }
             reject(error);
         });
 
@@ -115,6 +125,7 @@ export async function chat(
         stream?: boolean;
         retries?: number;
         forceJson?: boolean;
+        signal?: AbortSignal;
     }
 ): Promise<OllamaChatResponse> {
     const maxRetries = options?.retries || 1; // ✅ REDUCED: Only 1 attempt for faster responses
@@ -137,16 +148,18 @@ export async function chat(
 
             console.log(`[Ollama] Sending request to ${OLLAMA_BASE_URL}/api/chat`);
 
-            const response = await httpRequest(
+            const rawResponse = await httpRequest(
                 `${OLLAMA_BASE_URL}/api/chat`,
                 'POST',
-                requestBody
+                requestBody as unknown as undefined,
+                {},
+                options?.signal
             );
 
             const endTime = Date.now();
             console.log(`[Ollama] ✓ Inference completed in ${endTime - startTime}ms`);
 
-            let chatResponse = response;
+            let chatResponse = rawResponse as Record<string, unknown>;
 
             // Ensure response has the expected structure
             if (!chatResponse || typeof chatResponse !== 'object') {
@@ -168,7 +181,7 @@ export async function chat(
                 }
             }
 
-            return chatResponse as OllamaChatResponse;
+            return chatResponse as unknown as OllamaChatResponse;
         } catch (error) {
             lastError = error as Error;
             console.error(`[Ollama] ✗ Request failed:`, error);
@@ -205,6 +218,45 @@ export async function complete(
 }
 
 /**
+ * Generate embeddings using Ollama
+ */
+export async function generateEmbedding(text: string, model: string = 'nomic-embed-text'): Promise<number[]> {
+    try {
+        const response = await httpRequest(`${OLLAMA_BASE_URL}/api/embeddings`, 'POST', {
+            model,
+            prompt: text
+        });
+
+        const embeddingResponse = response as { embedding?: number[] };
+        if (embeddingResponse && embeddingResponse.embedding) {
+            return embeddingResponse.embedding;
+        }
+
+        throw new Error('No embedding in response');
+    } catch (error) {
+        console.error('[Ollama] Failed to generate embedding:', error);
+        // Return zero vector as fallback
+        return new Array(768).fill(0);
+    }
+}
+
+/**
+ * List available models
+ */
+export async function listModels(): Promise<string[]> {
+    try {
+        const response = await httpRequest(`${OLLAMA_BASE_URL}/api/tags`, 'GET') as { models?: Array<{ name: string }> };
+        if (response && response.models) {
+            return response.models.map((m) => m.name);
+        }
+        return [];
+    } catch (error) {
+        console.error('[Ollama] Failed to list models:', error);
+        return [];
+    }
+}
+
+/**
  * Check Ollama health
  */
 export async function healthCheck(): Promise<{
@@ -213,16 +265,16 @@ export async function healthCheck(): Promise<{
     error?: string;
 }> {
     try {
-        const response = await httpRequest(`${OLLAMA_BASE_URL}/api/tags`, 'GET');
+        const response = await httpRequest(`${OLLAMA_BASE_URL}/api/tags`, 'GET') as { models?: Array<{ name: string }> };
 
         if (response && response.models) {
-            const hasModel = response.models.some((m: any) => m.name === OLLAMA_MODEL);
+            const hasModel = response.models.some((m) => m.name === OLLAMA_MODEL);
 
             if (hasModel) {
                 console.log(`[Ollama] ✓ Health check passed - ${OLLAMA_MODEL} available`);
                 return { status: 'healthy', model: OLLAMA_MODEL };
             } else {
-                const availableModels = response.models.map((m: any) => m.name).join(', ');
+                const availableModels = response.models.map((m) => m.name).join(', ');
                 console.warn(`[Ollama] ⚠ Model ${OLLAMA_MODEL} not found. Available: ${availableModels}`);
                 return {
                     status: 'unhealthy',

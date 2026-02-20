@@ -3,7 +3,12 @@
 import { Card } from "@/components/ui/card";
 
 interface PriceSummaryProps {
-    service: any;
+    service: {
+        title: string;
+        subtitle?: string;
+        price?: number;
+        currency?: string;
+    };
     passengerCount: number;
     selectedSeats: string[];
     totalPrice: number;

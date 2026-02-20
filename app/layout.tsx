@@ -39,6 +39,7 @@ import { ChatProvider } from "@/lib/chat/chat-context";
 import { ServiceProvider } from "@/lib/services/service-context";
 import { BookingProvider } from "@/lib/services/booking-context";
 import { AuthProvider } from "@/lib/auth-context";
+import { NotificationProvider } from "@/lib/notifications/notification-context";
 
 export default function RootLayout({
   children,
@@ -53,9 +54,11 @@ export default function RootLayout({
         <AuthProvider>
           <ServiceProvider>
             <BookingProvider>
-              <ChatProvider>
-                {children}
-              </ChatProvider>
+              <NotificationProvider>
+                <ChatProvider>
+                  {children}
+                </ChatProvider>
+              </NotificationProvider>
             </BookingProvider>
           </ServiceProvider>
         </AuthProvider>

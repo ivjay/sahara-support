@@ -10,7 +10,14 @@
       "WebFetch(domain:lacuna-eta.vercel.app)",
       "Bash(npx shadcn@latest add:*)",
       "Bash(npx tsc:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(where:*)",
+      "Bash(check_migrations.sql:*)",
+      "Bash(check_all_tables.sql:*)",
+      "Bash(.env.local:*)",
+      "Bash(redis-cli:*)",
+      "Bash(taskkill:*)",
+      "Bash(ls:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

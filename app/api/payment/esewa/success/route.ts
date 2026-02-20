@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(
             new URL(`/payment/success?bookingId=${oid}&transactionId=${refId}`, request.url)
         );
-    } catch (error: any) {
+    } catch (error) {
         console.error('[eSewa Success] Error:', error);
         return NextResponse.redirect(
             new URL('/payment/failed?reason=server_error', request.url)

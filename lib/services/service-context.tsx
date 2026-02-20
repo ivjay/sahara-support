@@ -2,21 +2,8 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { BookingOption } from "@/lib/chat/types";
-import {
-    MOCK_BUS_OPTIONS,
-    MOCK_FLIGHT_OPTIONS,
-    MOCK_APPOINTMENT_OPTIONS,
-    MOCK_MOVIE_OPTIONS
-} from "@/lib/chat/mock-data";
 import { supabase } from "@/lib/supabase";
-
-// Combine all initial mock data
-const INITIAL_SERVICES: BookingOption[] = [
-    ...MOCK_BUS_OPTIONS,
-    ...MOCK_FLIGHT_OPTIONS,
-    ...MOCK_APPOINTMENT_OPTIONS,
-    ...MOCK_MOVIE_OPTIONS
-];
+import { generateServiceEmbedding } from "@/lib/search/embeddings";
 
 interface ServiceContextType {
     services: BookingOption[];
@@ -28,7 +15,6 @@ interface ServiceContextType {
 }
 
 const ServiceContext = createContext<ServiceContextType | undefined>(undefined);
-
 export function ServiceProvider({ children }: { children: React.ReactNode }) {
     const [services, setServices] = useState<BookingOption[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -49,62 +35,67 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
 
             if (error) {
                 console.error('[ServiceContext] ✗ Error loading from Supabase:', error);
-                // Fallback to mocks if Supabase fails
-                setServices(INITIAL_SERVICES);
+                setServices([]);
             } else if (!data || data.length === 0) {
-                // First time: Seed database with mock data
-                console.log('[ServiceContext] 🌱 Seeding database with mock data...');
-                await seedDatabase();
+                console.warn('[ServiceContext] ⚠ No services found in database');
+                setServices([]);
             } else {
                 console.log('[ServiceContext] ✓ Loaded', data.length, 'services from database');
                 setServices(data as BookingOption[]);
             }
         } catch (err) {
             console.error('[ServiceContext] ✗ Failed to load services:', err);
-            setServices(INITIAL_SERVICES);
+            setServices([]);
         } finally {
             setIsLoading(false);
         }
     }
 
-    async function seedDatabase() {
-        try {
-            const { error } = await supabase
-                .from('services')
-                .insert(INITIAL_SERVICES.map(service => ({
-                    ...service,
-                    created_at: new Date().toISOString()
-                })));
-
-            if (error) {
-                console.error('[ServiceContext] ✗ Error seeding database:', error);
-                setServices(INITIAL_SERVICES);
-            } else {
-                console.log('[ServiceContext] ✓ Database seeded successfully');
-                setServices(INITIAL_SERVICES);
-            }
-        } catch (err) {
-            console.error('[ServiceContext] ✗ Seed failed:', err);
-            setServices(INITIAL_SERVICES);
-        }
-    }
-
     const addService = async (service: BookingOption) => {
         try {
-            const { error } = await supabase
+            // ✅ Generate embedding for hybrid search
+            console.log('[ServiceContext] 🔮 Generating embedding for:', service.title);
+            const embedding = await generateServiceEmbedding({
+                title: service.title,
+                description: service.subtitle,
+                tags: [] // BookingOption doesn't have tags field
+            });
+
+            // ✅ Prepare data: Remove 'id' (UUID auto-generated), keep service_id
+            const { id: _unusedId, ...serviceWithoutId } = service;
+            const serviceData = {
+                ...serviceWithoutId,
+                service_id: service.id,  // Use BookingOption.id as service_id
+                embedding,
+                created_at: new Date().toISOString()
+            };
+
+            console.log('[ServiceContext] 📤 Sending to Supabase:', {
+                service_id: serviceData.service_id,
+                title: serviceData.title,
+                category: serviceData.category,
+                embeddingLength: embedding?.length
+            });
+
+            const { data, error } = await supabase
                 .from('services')
-                .insert({
-                    ...service,
-                    created_at: new Date().toISOString()
-                });
+                .insert(serviceData)
+                .select()
+                .single();
 
             if (error) {
-                console.error('[ServiceContext] ✗ Error adding service:', error);
+                console.error('[ServiceContext] ✗ Error adding service:', {
+                    message: error.message,
+                    details: error.details,
+                    hint: error.hint,
+                    code: error.code
+                });
                 throw error;
             }
 
-            console.log('[ServiceContext] ✓ Service added:', service.id);
-            setServices(prev => [service, ...prev]);
+            console.log('[ServiceContext] ✓ Service added with embedding:', data);
+            // Use the returned data (includes auto-generated UUID)
+            setServices(prev => [{ ...service, id: data.service_id } as BookingOption, ...prev]);
         } catch (err) {
             console.error('[ServiceContext] ✗ Add service failed:', err);
             throw err;
@@ -113,10 +104,25 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
 
     const updateService = async (id: string, updates: Partial<BookingOption>) => {
         try {
+            // ✅ Regenerate embedding if title/subtitle changed
+            let embedding = undefined;
+            if (updates.title || updates.subtitle) {
+                const currentService = services.find(s => s.id === id);
+                if (currentService) {
+                    console.log('[ServiceContext] 🔮 Regenerating embedding for:', currentService.title);
+                    embedding = await generateServiceEmbedding({
+                        title: updates.title || currentService.title,
+                        description: updates.subtitle || currentService.subtitle,
+                        tags: [] // BookingOption doesn't have tags field
+                    });
+                }
+            }
+
             const { error } = await supabase
                 .from('services')
                 .update({
                     ...updates,
+                    ...(embedding && { embedding }),  // ✅ Update embedding if generated
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', id);
@@ -168,9 +174,8 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
                 .delete()
                 .neq('id', ''); // Delete all
 
-            // Re-seed with mock data
-            await seedDatabase();
-            console.log('[ServiceContext] ✓ Reset to defaults');
+            console.log('[ServiceContext] ✓ All services cleared (Manual re-seed required if needed)');
+            setServices([]);
         } catch (err) {
             console.error('[ServiceContext] ✗ Reset failed:', err);
             throw err;

@@ -82,17 +82,19 @@ export default function ProfilePage() {
                     <div>
                         {isEditing ? (
                             <div className="flex gap-2">
-                                <Button variant="ghost" size="icon" onClick={handleCancel} className="rounded-full">
+                                <Button variant="outline" size="sm" onClick={handleCancel} className="rounded-full gap-2">
                                     <XIcon className="h-4 w-4" />
+                                    Cancel
                                 </Button>
-                                <Button size="sm" onClick={handleSave} className="rounded-full gap-2">
+                                <Button size="sm" onClick={handleSave} className="rounded-full gap-2 bg-primary">
                                     <Save className="h-4 w-4" />
-                                    Save
+                                    Save Changes
                                 </Button>
                             </div>
                         ) : (
-                            <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)} className="rounded-full hover:bg-muted">
+                            <Button variant="default" size="sm" onClick={() => setIsEditing(true)} className="rounded-full gap-2 bg-primary hover:bg-primary/90">
                                 <Edit3 className="h-4 w-4" />
+                                Edit Profile
                             </Button>
                         )}
                     </div>
@@ -100,6 +102,29 @@ export default function ProfilePage() {
             </header>
 
             <div className="flex-1 px-4 pb-10 max-w-2xl mx-auto w-full flex flex-col gap-5">
+
+                {/* Incomplete Profile Banner */}
+                {!isEditing && (!profile.phone || !profile.dateOfBirth || !profile.currentAddress) && (
+                    <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 mt-4 flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                            <h3 className="font-semibold text-sm text-amber-900 dark:text-amber-100 mb-1">
+                                Complete Your Profile
+                            </h3>
+                            <p className="text-xs text-amber-700 dark:text-amber-300 mb-3">
+                                Add your personal details to get personalized recommendations and faster bookings.
+                            </p>
+                            <Button
+                                size="sm"
+                                onClick={() => setIsEditing(true)}
+                                className="bg-amber-600 hover:bg-amber-700 text-white rounded-full gap-2 h-8"
+                            >
+                                <Edit3 className="h-3.5 w-3.5" />
+                                Fill Out Details
+                            </Button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Profile Header Card */}
                 <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-sm mt-4">
@@ -463,6 +488,21 @@ function InfoField({
     isEditing?: boolean,
     onChange?: (val: string) => void
 }) {
+    const placeholders: Record<string, string> = {
+        "Date of Birth": "YYYY-MM-DD",
+        "Gender": "Male/Female/Other",
+        "Nationality": "e.g., Nepali",
+        "Primary Phone": "+977-XXX-XXXXXXX",
+        "Alternate Phone": "+977-XXX-XXXXXXX",
+        "Current Address": "Enter your current address",
+        "Permanent Address": "Enter your permanent address",
+        "City": "e.g., Kathmandu",
+        "Postal Code": "e.g., 44600",
+        "Contact Name": "Emergency contact name",
+        "Relationship": "e.g., Spouse, Parent",
+        "Phone Number": "+977-XXX-XXXXXXX"
+    };
+
     return (
         <div className={`space-y-1 ${fullWidth ? 'sm:col-span-2' : ''}`}>
             <p className="text-xs text-muted-foreground">{label}</p>
@@ -472,10 +512,13 @@ function InfoField({
                     <Input
                         value={value}
                         onChange={(e) => onChange(e.target.value)}
+                        placeholder={placeholders[label] || `Enter ${label.toLowerCase()}`}
                         className="h-8 text-sm"
                     />
                 ) : (
-                    <p className="text-sm font-medium min-h-[20px]">{value}</p>
+                    <p className={`text-sm font-medium min-h-[20px] ${!value && 'text-muted-foreground/50 italic'}`}>
+                        {value || "Not provided"}
+                    </p>
                 )}
             </div>
         </div>

@@ -5,7 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, Clock, Star, Users, Calendar, Sparkles } from "lucide-react";
 
 interface ServiceShowcaseProps {
-    service: any;
+    service: {
+        title: string;
+        subtitle?: string;
+        price?: number;
+        currency?: string;
+        details?: Record<string, string | undefined>;
+        type?: string;
+        available?: boolean;
+    };
     serviceType: 'movie' | 'bus' | 'flight' | 'appointment';
 }
 

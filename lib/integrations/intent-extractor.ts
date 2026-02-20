@@ -7,7 +7,7 @@
 import { Intent } from '@/lib/chat/types';
 import { chat, extractJSON } from './ollama-service';
 import type { OllamaMessage } from './ollama-service';
-import { SAHARA_SYSTEM_PROMPT, detectLanguage, parseBookingResponse } from '@/lib/chat/sahara-prompt';
+import { SAHARA_SYSTEM_PROMPT, detectLanguage, parseBookingResponse } from '@/lib/chat/sahara-prompt-conversational';
 
 export interface IntentExtractionResult {
     intent: Intent;

@@ -8,12 +8,30 @@ import Image from "next/image";
 
 type PaymentGateway = 'esewa' | 'khalti' | 'cash';
 
+interface PassengerInfo {
+    fullName: string;
+    phone?: string;
+    email?: string;
+}
+
+interface BookingData {
+    serviceId: string;
+    serviceType: string;
+    serviceTitle: string;
+    serviceSubtitle?: string;
+    serviceDetails?: Record<string, string | undefined>;
+    date: string;
+    time: string;
+    passengers?: PassengerInfo[];
+    seats?: string[];
+}
+
 interface PaymentStepProps {
     totalPrice: number;
     currency: string;
     onPaymentSelect: (method: 'qr' | 'cash') => void;
     onComplete: (bookingId: string) => void;
-    bookingData: any;
+    bookingData: BookingData;
 }
 
 export function PaymentStep({
@@ -62,10 +80,15 @@ export function PaymentStep({
                 amount: `${currency} ${totalPrice}`,
                 date: bookingData.date, // ✅ Keep as string, don't convert to Date object
                 details: {
+                    // Merge all service details (from, to, departure, duration, busType, aircraft, etc.)
+                    ...(bookingData.serviceDetails || {}),
+                    // User-specific booking data (override service defaults)
                     serviceId: bookingData.serviceId,
                     serviceType: bookingData.serviceType,
                     date: bookingData.date,
-                    time: bookingData.time || 'N/A',
+                    time: (bookingData.time && bookingData.time !== 'all-day')
+                        ? bookingData.time
+                        : (bookingData.serviceDetails?.departure || bookingData.time || 'N/A'),
                     passengerCount: bookingData.passengers?.length || 1,
                     passengers: bookingData.passengers || [],
                     seats: bookingData.seats || [],
@@ -94,9 +117,9 @@ export function PaymentStep({
 
             onPaymentSelect('cash');
             onComplete(result.id || bookingId);
-        } catch (error: any) {
+        } catch (error) {
             console.error('[PaymentStep] ✗ Cash booking failed:', error);
-            setError(error.message || 'Booking failed. Please try again.');
+            setError(error instanceof Error ? error.message : 'Booking failed. Please try again.');
         } finally {
             setProcessing(false);
         }
@@ -120,10 +143,15 @@ export function PaymentStep({
                 amount: `${currency} ${totalPrice}`,
                 date: bookingData.date, // ✅ Keep as string
                 details: {
+                    // Merge all service details (from, to, departure, duration, busType, aircraft, etc.)
+                    ...(bookingData.serviceDetails || {}),
+                    // User-specific booking data (override service defaults)
                     serviceId: bookingData.serviceId,
                     serviceType: bookingData.serviceType,
                     date: bookingData.date,
-                    time: bookingData.time || 'N/A',
+                    time: (bookingData.time && bookingData.time !== 'all-day')
+                        ? bookingData.time
+                        : (bookingData.serviceDetails?.departure || bookingData.time || 'N/A'),
                     passengerCount: bookingData.passengers?.length || 1,
                     passengers: bookingData.passengers || [],
                     seats: bookingData.seats || [],
@@ -145,7 +173,7 @@ export function PaymentStep({
             console.log('[PaymentStep] Booking created:', booking);
 
             // Initiate payment
-            const customerInfo = bookingData.passengers?.[0] || {};
+            const customerInfo = bookingData.passengers?.[0] || { fullName: '', email: '', phone: '' };
             const paymentResponse = await fetch('/api/payment/initiate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -171,9 +199,9 @@ export function PaymentStep({
                 // For Khalti, redirect to payment URL
                 window.location.href = paymentData.paymentUrl;
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error('[PaymentStep] Digital payment failed:', error);
-            setError(error.message || 'Payment initiation failed. Please try again.');
+            setError(error instanceof Error ? error.message : 'Payment initiation failed. Please try again.');
             setInitiatingPayment(false);
         }
     }

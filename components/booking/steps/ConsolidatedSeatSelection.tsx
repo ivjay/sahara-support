@@ -183,9 +183,9 @@ export function ConsolidatedSeatSelection({
     }
 
     // Merge static venue rows with real-time seat inventory
-    const venueRows = (venue?.seat_config?.rows || []).map((row: any) => ({
+    const venueRows = (venue?.seat_config?.rows || []).map((row: { label: string; seats: Array<{ number: number; label?: string; type?: string; status?: string } | null> }) => ({
         ...row,
-        seats: row.seats.map((seat: any) => {
+        seats: row.seats.map((seat) => {
             if (!seat) return null;
 
             // Compute label same as SeatGrid and API

@@ -13,8 +13,8 @@ export type BookingStep =
     | 'payment'
     | 'confirmation';
 
-export type SeatStatus = 'available' | 'selected' | 'booked' | 'reserved';
-export type SeatType = 'vip' | 'regular' | 'economy' | 'business' | 'window' | 'aisle';
+export type SeatStatus = 'available' | 'selected' | 'booked' | 'reserved' | 'blocked';
+export type SeatType = 'vip' | 'regular' | 'premium' | 'disabled' | 'economy' | 'business' | 'window' | 'aisle';
 
 export interface SeatInfo {
     label: string;              // "A3", "1A"
@@ -70,7 +70,7 @@ export interface BookingWizardState {
     stepHistory: BookingStep[];
 
     // Service info
-    selectedService: any;       // BookingOption from existing types
+    selectedService: Record<string, unknown>;  // BookingOption from existing types
     venueId?: string;
 
     // Date/Time

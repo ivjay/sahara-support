@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(
             new URL(`/payment/failed?bookingId=${pid || 'unknown'}&reason=user_cancelled`, request.url)
         );
-    } catch (error: any) {
+    } catch (error) {
         console.error('[eSewa Failure] Error:', error);
         return NextResponse.redirect(
             new URL('/payment/failed?reason=server_error', request.url)

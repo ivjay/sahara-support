@@ -17,6 +17,12 @@ import { handleOptionSelection } from "@/lib/chat/agent";
 import { BookingWizard } from "@/components/booking/BookingWizard";
 import { BookingMethodSelector } from "@/components/booking/BookingMethodSelector";
 import { needsWizard, getServiceType, generateSessionId } from "@/lib/booking/wizard-integration";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { NotificationPermission } from "@/components/notifications/NotificationPermission";
+import { useNotifications } from "@/lib/notifications/notification-context";
+import { createBookingNotificationsAndReminders } from "@/lib/notifications/booking-notifications";
+import { generateReceiptFromBooking, generateDetailedReceipt } from "@/lib/booking/receipt-generator";
+import { getServicePassengerLabel, getServiceCheckInTime } from "@/lib/booking/service-helpers";
 
 export default function ChatPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -24,37 +30,51 @@ export default function ChatPage() {
     const [pendingVerifications, setPendingVerifications] = useState<Set<string>>(new Set());
     const conversationHistoryRef = useRef<Array<{ role: "user" | "assistant"; content: string }>>([]);
 
-    // Booking Wizard state
-    const [wizardState, setWizardState] = useState<{
-        mode: 'selector' | 'wizard' | 'chat';
-        service: BookingOption;
-        serviceType: 'movie' | 'bus' | 'flight' | 'appointment';
-    } | null>(null);
-    const [sessionId] = useState(() => generateSessionId());
-
     const {
         state,
         addMessage,
         setLoading,
+        setWizardState, // Added
     } = useChatContext();
 
+    // Ref to track generation and allow cancellation
+    const isGeneratingRef = useRef(false);
+
+    // Booking Wizard state from context
+    const wizardState = state.wizardState;
+    const [sessionId] = useState(() => generateSessionId());
+
     const { addBooking } = useBookings();
+    const { createNotification } = useNotifications();
+
+    const handleStop = useCallback(() => {
+        console.log("[Chat] 🛑 Stopping generation...");
+        isGeneratingRef.current = false;
+        setLoading(false);
+    }, [setLoading]);
 
     const handleSend = useCallback(async (text: string) => {
         if (!text.trim()) return;
 
         addMessage(text, "user");
         setLoading(true);
+        isGeneratingRef.current = true;
 
         try {
             console.log("[Chat] Sending message:", text);
 
             const response = await newSendMessage(
                 text,
-                conversationId,
                 conversationHistoryRef.current,
-                state.userProfile?.name
+                conversationId,
+                state.userProfile?.name,
+                state.userProfile?.id // ✅ Pass user ID for isolation
             );
+
+            if (!isGeneratingRef.current) {
+                console.log("[Chat] ⚡ Response ignored (stopped by user)");
+                return;
+            }
 
             console.log("[Chat] Response received:", response);
 
@@ -71,6 +91,7 @@ export default function ChatPage() {
             addMessage(response.content, "assistant", {
                 options: response.options,
                 quickReplies: response.quickReplies,
+                seatSelection: response.seatSelection
             });
 
             if (response.booking?.success && response.booking.bookingId) {
@@ -99,23 +120,37 @@ export default function ChatPage() {
 
                 await addBooking(newRecord);
 
+                // Create notification and schedule reminders
+                if (state.userProfile?.id) {
+                    await createBookingNotificationsAndReminders(
+                        {
+                            id: state.userProfile.id,
+                            name: state.userProfile.name,
+                            phone: state.userProfile.phone
+                        },
+                        {
+                            bookingId: newRecord.id,
+                            serviceType: newRecord.type,
+                            destination: newRecord.subtitle,
+                            date: newRecord.date,
+                            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        }
+                    );
+                }
+
                 if (newRecord.status === "Under Review") {
                     setPendingVerifications(prev => new Set(prev).add(bookingId));
                     return; // Skip celebration message for now
                 }
 
-                const receiptData = {
-                    id: bookingId,
-                    serviceName: newRecord.title,
-                    location: newRecord.subtitle,
-                    date: newRecord.date.toLocaleDateString(),
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    price: newRecord.amount,
-                    status: "Confirmed" as const,
-                    userName: state.userProfile?.name || "Guest",
-                    userPhone: state.userProfile?.phone || "N/A",
-                    timestamp: new Date().toISOString()
-                };
+                // Generate receipt using utility
+                const receiptData = generateReceiptFromBooking(
+                    newRecord,
+                    {
+                        name: state.userProfile?.name,
+                        phone: state.userProfile?.phone
+                    }
+                );
 
                 addMessage(
                     `🎉 Booking confirmed! ID: **${bookingId}**`,
@@ -124,18 +159,29 @@ export default function ChatPage() {
                 );
             }
 
-        } catch (error: any) {
+        } catch (error) {
             console.error("[Chat] Error:", error);
 
-            const errorMessage = error.message === 'Request timeout'
+            const errorMessage = error instanceof Error && error.message === 'Request timeout'
                 ? "Sorry, the request took too long. Please try again."
                 : "Sorry, something went wrong. Please try again.";
 
             addMessage(errorMessage, "assistant");
         } finally {
             setLoading(false);
+            isGeneratingRef.current = false;
         }
     }, [conversationId, addMessage, setLoading, addBooking, state.userProfile]);
+
+    const onStepDataChange = useCallback((data: Record<string, unknown>) => {
+        setWizardState(prev => prev ? {
+            ...prev,
+            stepData: {
+                ...prev.stepData,
+                ...data
+            }
+        } : null);
+    }, [setWizardState]);
 
     // ✅ FIX: Handle option selection properly
     const handleOptionSelect = useCallback(async (option: BookingOption) => {
@@ -152,13 +198,19 @@ export default function ChatPage() {
             return; // Don't proceed with normal flow
         }
 
-        // Add user selection as message
         addMessage(`Selected: ${option.title}`, "user");
         setLoading(true);
+        isGeneratingRef.current = true;
 
         try {
             // Call the agent's option handler
             const agentResponse = await handleOptionSelection(option, state.currentBooking);
+
+            // ✅ CHECK: If user stopped generation, ignore result
+            if (!isGeneratingRef.current) {
+                console.log("[Chat] ⚡ Option response ignored (stopped by user)");
+                return;
+            }
 
             console.log("[Chat] Agent response:", agentResponse);
 
@@ -175,13 +227,16 @@ export default function ChatPage() {
 
         } catch (error) {
             console.error("[Chat] Option selection error:", error);
-            addMessage("Sorry, something went wrong. Please try again.", "assistant");
+            if (isGeneratingRef.current) {
+                addMessage("Sorry, something went wrong. Please try again.", "assistant");
+            }
         } finally {
             setLoading(false);
+            isGeneratingRef.current = false;
         }
     }, [addMessage, setLoading, state.currentBooking]);
 
-    // ✅ SMART POLLING: Only poll when waiting for admin verification
+    // ✅ SMART POLLING: Exponential backoff polling for admin verification
     const { bookings, refreshBookings } = useBookings();
     useEffect(() => {
         // Only poll if there are pending verifications
@@ -189,15 +244,35 @@ export default function ChatPage() {
 
         console.log(`[Chat] 👀 Watching ${pendingVerifications.size} pending verification(s)...`);
 
-        // Poll every 5 seconds while waiting for admin
-        const pollInterval = setInterval(async () => {
-            console.log('[Chat] 🔄 Checking for admin verification...');
+        let pollDelay = 5000; // Start at 5 seconds
+        const maxDelay = 60000; // Max 60 seconds
+        const maxDuration = 600000; // Stop after 10 minutes
+        const startTime = Date.now();
+        let timeoutId: NodeJS.Timeout;
+
+        const poll = async () => {
+            // Check if we've exceeded max duration
+            if (Date.now() - startTime > maxDuration) {
+                console.log('[Chat] ⏱️ Polling timeout reached (10 minutes)');
+                return;
+            }
+
+            console.log(`[Chat] 🔄 Checking for admin verification (next check in ${pollDelay / 1000}s)...`);
             await refreshBookings();
-        }, 5000);
+
+            // Exponential backoff: double the delay up to max
+            pollDelay = Math.min(pollDelay * 2, maxDelay);
+
+            // Schedule next poll
+            timeoutId = setTimeout(poll, pollDelay);
+        };
+
+        // Start polling
+        timeoutId = setTimeout(poll, pollDelay);
 
         return () => {
             console.log('[Chat] 🛑 Stopped polling');
-            clearInterval(pollInterval);
+            clearTimeout(timeoutId);
         };
     }, [pendingVerifications.size, refreshBookings]);
 
@@ -215,18 +290,14 @@ export default function ChatPage() {
                     return newSet;
                 });
 
-                const receiptData = {
-                    id: booking.id,
-                    serviceName: booking.title,
-                    location: booking.subtitle,
-                    date: booking.date.toLocaleDateString(),
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    price: booking.amount,
-                    status: "Confirmed" as const,
-                    userName: state.userProfile?.name || "Guest",
-                    userPhone: state.userProfile?.phone || "N/A",
-                    timestamp: new Date().toISOString()
-                };
+                // Generate receipt using utility
+                const receiptData = generateReceiptFromBooking(
+                    booking,
+                    {
+                        name: state.userProfile?.name,
+                        phone: state.userProfile?.phone
+                    }
+                );
 
                 addMessage(
                     `✅ **Admin Verified!** Your payment for **${booking.title}** has been confirmed.`,
@@ -237,18 +308,23 @@ export default function ChatPage() {
         });
     }, [bookings, pendingVerifications, addMessage, state.userProfile]);
 
-    const handleNewChat = () => {
+    const handleNewChat = useCallback(() => {
         setConversationId("");
         conversationHistoryRef.current = [];
         setSidebarOpen(false);
-    };
+        // ✅ CRITICAL: Reset loading and generation states
+        setLoading(false);
+        isGeneratingRef.current = false;
+    }, [setLoading]);
+
+    const handleCloseSidebar = useCallback(() => setSidebarOpen(false), []);
 
     return (
         <div className="h-dvh flex overflow-hidden bg-background">
-            <div className="hidden lg:block w-[260px] shrink-0 border-r border-border overflow-y-auto">
+            <div className="hidden lg:block w-[260px] shrink-0 border-r border-border">
                 <Sidebar
                     isOpen={true}
-                    onClose={() => { }}
+                    onClose={handleCloseSidebar}
                     onNewChat={handleNewChat}
                 />
             </div>
@@ -256,7 +332,7 @@ export default function ChatPage() {
             <div className="lg:hidden">
                 <Sidebar
                     isOpen={sidebarOpen}
-                    onClose={() => setSidebarOpen(false)}
+                    onClose={handleCloseSidebar}
                     onNewChat={handleNewChat}
                 />
             </div>
@@ -274,7 +350,8 @@ export default function ChatPage() {
                     <div className="ml-2">
                         <LogoCompact />
                     </div>
-                    <div className="ml-auto">
+                    <div className="ml-auto flex items-center gap-2">
+                        <NotificationBell />
                         <Link href="/profile">
                             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center text-sm font-bold text-white shadow-md hover:shadow-lg transition-shadow">
                                 {state.userProfile?.avatarInitials || <User className="h-5 w-5" />}
@@ -292,7 +369,8 @@ export default function ChatPage() {
 
                 <ChatInput
                     onSend={handleSend}
-                    disabled={state.isLoading}
+                    onStop={handleStop}
+                    isGenerating={state.isLoading}
                     placeholder="Message Sahara..."
                 />
             </div>
@@ -312,17 +390,25 @@ export default function ChatPage() {
                         // Continue with traditional chat flow
                         addMessage(`Selected: ${service.title}`, "user");
                         setLoading(true);
+                        isGeneratingRef.current = true;
 
                         try {
                             const agentResponse = await handleOptionSelection(service, state.currentBooking);
+
+                            if (!isGeneratingRef.current) return;
+
                             addMessage(agentResponse.content, "assistant", {
                                 options: agentResponse.options,
                                 quickReplies: agentResponse.quickReplies,
+                                seatSelection: agentResponse.seatSelection
                             });
                         } catch (error) {
-                            addMessage("Sorry, something went wrong. Please try again.", "assistant");
+                            if (isGeneratingRef.current) {
+                                addMessage("Sorry, something went wrong. Please try again.", "assistant");
+                            }
                         } finally {
                             setLoading(false);
+                            isGeneratingRef.current = false;
                         }
                     }}
                     onSelectWizard={() => {
@@ -342,9 +428,7 @@ export default function ChatPage() {
                         {/* Close Button */}
                         <button
                             onClick={() => {
-                                if (confirm('Are you sure you want to cancel this booking?')) {
-                                    setWizardState(null);
-                                }
+                                setWizardState(null);
                             }}
                             className="absolute -top-4 -right-4 z-10 w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-2xl hover:shadow-red-500/50 transition-all hover:scale-110 flex items-center justify-center group"
                         >
@@ -356,6 +440,8 @@ export default function ChatPage() {
                             selectedService={wizardState.service}
                             sessionId={sessionId}
                             userProfile={state.userProfile}
+                            stepData={wizardState.stepData}
+                            onStepDataChange={onStepDataChange}
                             onComplete={async (bookingId) => {
                                 console.log('[Chat] ✅ Booking complete:', bookingId);
                                 setWizardState(null);
@@ -364,7 +450,7 @@ export default function ChatPage() {
                                 try {
                                     const response = await fetch('/api/bookings');
                                     const bookings = await response.json();
-                                    const booking = bookings.find((b: any) => b.id === bookingId);
+                                    const booking = bookings.find((b: BookingRecord) => b.id === bookingId);
 
                                     if (booking) {
                                         // Add to booking context
@@ -382,25 +468,41 @@ export default function ChatPage() {
 
                                         await addBooking(newRecord);
 
-                                        // Create receipt data
-                                        const receiptData = {
-                                            id: booking.id,
-                                            serviceName: booking.title,
-                                            location: booking.subtitle || booking.details?.hospital || booking.details?.clinic || booking.details?.theater || booking.details?.to || '',
-                                            date: new Date(booking.date).toLocaleDateString(),
-                                            time: booking.details?.time || 'N/A',
-                                            seats: booking.details?.seats?.join(', ') || undefined,
-                                            passengers: booking.details?.passengerCount || 1,
-                                            passengerNames: (booking.details?.passengers || []).map((p: any) => p.fullName).filter(Boolean),
-                                            serviceType: booking.type,
-                                            price: booking.amount,
-                                            status: booking.status as "Confirmed" | "Pending" | "Under Review",
-                                            userName: state.userProfile?.name || "Guest",
-                                            userPhone: state.userProfile?.phone || "N/A",
-                                            timestamp: new Date().toISOString(),
-                                            paymentMethod: booking.details?.paymentMethod as 'qr' | 'cash' | undefined,
-                                            qrCodeUrl: undefined
-                                        };
+                                        // Create notification and schedule reminders using utility
+                                        if (state.userProfile?.id) {
+                                            await createBookingNotificationsAndReminders(
+                                                {
+                                                    id: state.userProfile.id,
+                                                    name: state.userProfile.name,
+                                                    phone: state.userProfile.phone
+                                                },
+                                                {
+                                                    bookingId: booking.id,
+                                                    serviceType: booking.type,
+                                                    destination: booking.subtitle || booking.details?.to,
+                                                    date: new Date(booking.date),
+                                                    time: booking.details?.time || 'N/A'
+                                                }
+                                            );
+                                        }
+
+                                        // Generate detailed receipt using utility
+                                        const receiptData = generateDetailedReceipt(
+                                            {
+                                                id: booking.id,
+                                                title: booking.title,
+                                                subtitle: booking.subtitle,
+                                                date: new Date(booking.date),
+                                                amount: booking.amount,
+                                                type: booking.type,
+                                                status: booking.status,
+                                                details: booking.details
+                                            },
+                                            {
+                                                name: state.userProfile?.name,
+                                                phone: state.userProfile?.phone
+                                            }
+                                        );
 
                                         // Natural, conversational confirmation
                                         const userName = state.userProfile?.name || '';
@@ -418,31 +520,32 @@ export default function ChatPage() {
                                             booking.details?.to ||
                                             'See booking details';
 
-                                        // Helper: context-aware people label
+                                        // Helper: context-aware people label (using service helpers)
                                         const isAppointment = wizardState?.serviceType === 'appointment';
-                                        const peopleLabel = isAppointment ? 'Patient(s)' : 'Passengers';
+                                        const peopleLabel = getServicePassengerLabel(wizardState?.serviceType, true);
 
                                         // Helper: passenger/patient names
-                                        const passengerNames = booking.details?.passengers?.map((p: any) => p.fullName).filter(Boolean) || [];
-                                        const peopleListLabel = isAppointment ? 'Patient' : 'Passengers';
+                                        const passengerNames = booking.details?.passengers?.map((p: { fullName?: string }) => p.fullName).filter(Boolean) || [];
+                                        const peopleListLabel = getServicePassengerLabel(wizardState?.serviceType, false);
                                         const passengerList = passengerNames.length > 0
                                             ? `\n👤 **${peopleListLabel}:**\n` + passengerNames.map((n: string, i: number) => `   ${i + 1}. ${n}`).join('\n')
                                             : '';
 
-                                        const arriveEarly = wizardState?.serviceType === 'movie' ? '15 minutes' : wizardState?.serviceType === 'bus' || wizardState?.serviceType === 'flight' ? '30 minutes' : '10 minutes';
+                                        const checkInMinutes = getServiceCheckInTime(wizardState?.serviceType);
+                                        const arriveEarly = `${checkInMinutes} minutes`;
 
                                         if (booking.status === 'Under Review') {
-                                            confirmationMessage = `✅ **Perfect! Your booking is reserved${greetingName}!**\n\nI've successfully booked **${booking.title}** for you!\n\n📋 **Complete Booking Details:**\n━━━━━━━━━━━━━━━━━━━━\n🆔 Booking ID: **${booking.id}**\n📍 ${isAppointment ? 'Clinic' : 'Location'}: ${locationLabel}\n📅 Date: ${receiptData.date}\n🕐 Time: ${receiptData.time}${receiptData.seats && receiptData.seats !== 'N/A' ? `\n💺 Seats: **${receiptData.seats}**` : ''}${receiptData.passengers > 1 ? `\n👥 ${peopleLabel}: ${receiptData.passengers}` : ''}${passengerList}\n💰 Total Amount: **${booking.amount}**\n━━━━━━━━━━━━━━━━━━━━\n\n**Next Steps:**\n1️⃣ Scan the QR code above to complete payment\n2️⃣ Our team will verify (2-5 minutes)\n3️⃣ You'll get confirmation here\n\n⏰ **Important:** Please arrive **${arriveEarly} early**.\n\n💾 Save your booking ID: **${booking.id}**`;
+                                            confirmationMessage = `✅ **Perfect! Your booking is reserved${greetingName}!**\n\nI've successfully booked **${booking.title}** for you!\n\n📋 **Complete Booking Details:**\n━━━━━━━━━━━━━━━━━━━━\n🆔 Booking ID: **${booking.id}**\n📍 ${isAppointment ? 'Clinic' : 'Location'}: ${locationLabel}\n📅 Date: ${receiptData.date}\n🕐 Time: ${receiptData.time}${receiptData.seats && receiptData.seats !== 'N/A' ? `\n💺 Seats: **${receiptData.seats}**` : ''}${receiptData.passengers && receiptData.passengers > 1 ? `\n👥 ${peopleLabel}: ${receiptData.passengers}` : ''}${passengerList}\n💰 Total Amount: **${booking.amount}**\n━━━━━━━━━━━━━━━━━━━━\n\n**Next Steps:**\n1️⃣ Scan the QR code above to complete payment\n2️⃣ Our team will verify (2-5 minutes)\n3️⃣ You'll get confirmation here\n\n⏰ **Important:** Please arrive **${arriveEarly} early**.\n\n💾 Save your booking ID: **${booking.id}**`;
                                         } else if (booking.status === 'Confirmed') {
                                             const encouragement = isAppointment
                                                 ? 'The specialist is ready to see you!'
                                                 : wizardState?.serviceType === 'movie'
-                                                ? 'Enjoy the show! 🍿'
-                                                : wizardState?.serviceType === 'bus' || wizardState?.serviceType === 'flight'
-                                                ? 'Have a safe journey! ✈️'
-                                                : 'Looking forward to seeing you there!';
+                                                    ? 'Enjoy the show! 🍿'
+                                                    : wizardState?.serviceType === 'bus' || wizardState?.serviceType === 'flight'
+                                                        ? 'Have a safe journey! ✈️'
+                                                        : 'Looking forward to seeing you there!';
 
-                                            confirmationMessage = `🎉 **All done${greetingName}! You're confirmed!**\n\n${wasRescheduled ? '⚠️ Quick note: I had to adjust your time slightly due to high demand, but everything else is perfect!\n\n' : ''}Your booking for **${booking.title}** is now **CONFIRMED**!\n\n📋 **Complete Booking Details:**\n━━━━━━━━━━━━━━━━━━━━\n🆔 Booking ID: **${booking.id}**\n📍 ${isAppointment ? 'Clinic' : 'Location'}: ${locationLabel}\n📅 Date: ${receiptData.date}\n🕐 Time: ${receiptData.time}${receiptData.seats && receiptData.seats !== 'N/A' ? `\n💺 Seats: **${receiptData.seats}**` : ''}${receiptData.passengers > 1 ? `\n👥 ${peopleLabel}: ${receiptData.passengers}` : ''}${passengerList}\n💰 Total: **${booking.amount}**\n${booking.details?.paymentMethod === 'cash' ? '💵 Payment: **On Arrival**' : '💳 Payment: **Received ✓**'}\n━━━━━━━━━━━━━━━━━━━━\n\n${encouragement}\n\n⏰ **Please arrive ${arriveEarly} early.**\n\nSee you there! 🎊`;
+                                            confirmationMessage = `🎉 **All done${greetingName}! You're confirmed!**\n\n${wasRescheduled ? '⚠️ Quick note: I had to adjust your time slightly due to high demand, but everything else is perfect!\n\n' : ''}Your booking for **${booking.title}** is now **CONFIRMED**!\n\n📋 **Complete Booking Details:**\n━━━━━━━━━━━━━━━━━━━━\n🆔 Booking ID: **${booking.id}**\n📍 ${isAppointment ? 'Clinic' : 'Location'}: ${locationLabel}\n📅 Date: ${receiptData.date}\n🕐 Time: ${receiptData.time}${receiptData.seats && receiptData.seats !== 'N/A' ? `\n💺 Seats: **${receiptData.seats}**` : ''}${receiptData.passengers && receiptData.passengers > 1 ? `\n👥 ${peopleLabel}: ${receiptData.passengers}` : ''}${passengerList}\n💰 Total: **${booking.amount}**\n${booking.details?.paymentMethod === 'cash' ? '💵 Payment: **On Arrival**' : '💳 Payment: **Received ✓**'}\n━━━━━━━━━━━━━━━━━━━━\n\n${encouragement}\n\n⏰ **Please arrive ${arriveEarly} early.**\n\nSee you there! 🎊`;
                                         }
 
                                         // Add reschedule notice if needed (future enhancement)
@@ -482,6 +585,9 @@ export default function ChatPage() {
                     </div>
                 </div>
             )}
+
+            {/* Notification Permission Prompt */}
+            <NotificationPermission />
         </div>
     );
 }

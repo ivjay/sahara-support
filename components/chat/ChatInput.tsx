@@ -8,12 +8,16 @@ import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
     onSend: (message: string) => void;
+    onStop?: () => void;
+    isGenerating?: boolean;
     disabled?: boolean;
     placeholder?: string;
 }
 
 export function ChatInput({
     onSend,
+    onStop,
+    isGenerating = false,
     disabled = false,
     placeholder = "Type your message...",
 }: ChatInputProps) {
@@ -23,13 +27,13 @@ export function ChatInput({
 
     // Auto-focus when enabled
     useEffect(() => {
-        if (!disabled && !isSending && textareaRef.current) {
+        if (!disabled && !isGenerating && !isSending && textareaRef.current) {
             // Small delay to ensure UI is ready
             setTimeout(() => {
                 textareaRef.current?.focus();
             }, 10);
         }
-    }, [disabled, isSending]);
+    }, [disabled, isGenerating, isSending]);
 
     const handleSend = () => {
         const trimmedValue = value.trim();
@@ -51,7 +55,11 @@ export function ChatInput({
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
-            handleSend();
+            if (isGenerating && onStop) {
+                onStop();
+            } else {
+                handleSend();
+            }
         }
     };
 
@@ -85,30 +93,35 @@ export function ChatInput({
                         value={value}
                         onChange={handleChange}
                         onKeyDown={handleKeyDown}
-                        placeholder={placeholder}
+                        placeholder={isGenerating ? "AI is responding..." : placeholder}
                         disabled={disabled}
                         rows={1}
                         className={cn(
                             "flex-1 resize-none min-h-[24px] max-h-[150px] py-1 px-1",
                             "border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0",
                             "placeholder:text-muted-foreground/70 text-[15px] leading-relaxed",
-                            "scrollbar-thin"
+                            "scrollbar-thin",
+                            isGenerating && "opacity-80"
                         )}
                     />
 
-                    {/* Send Button */}
+                    {/* Send / Stop Button */}
                     <Button
                         size="icon"
-                        onClick={handleSend}
-                        disabled={!canSend}
+                        onClick={isGenerating ? onStop : handleSend}
+                        disabled={disabled || (!canSend && !isGenerating)}
                         className={cn(
                             "h-8 w-8 shrink-0 rounded-lg transition-all duration-200",
-                            canSend
-                                ? "bg-primary hover:bg-primary/90 hover:scale-105 active:scale-95"
-                                : "bg-muted-foreground/20 text-muted-foreground cursor-not-allowed"
+                            isGenerating
+                                ? "bg-destructive/20 text-destructive hover:bg-destructive/30"
+                                : canSend
+                                    ? "bg-primary hover:bg-primary/90 hover:scale-105 active:scale-95"
+                                    : "bg-muted-foreground/20 text-muted-foreground cursor-not-allowed"
                         )}
                     >
-                        {disabled ? (
+                        {isGenerating ? (
+                            <div className="h-2.5 w-2.5 bg-current rounded-sm" />
+                        ) : isSending ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                             <ArrowUp className={cn("h-4 w-4 transition-transform", isSending && "-translate-y-1 opacity-0")} />
@@ -118,7 +131,9 @@ export function ChatInput({
 
                 {/* Helper Text */}
                 <p className="text-[11px] text-muted-foreground/60 text-center mt-2">
-                    Press Enter to send • Shift+Enter for new line
+                    {isGenerating
+                        ? "AI is thinking... Press Enter or click Stop to cancel"
+                        : "Press Enter to send • Shift+Enter for new line"}
                 </p>
             </div>
         </div>

@@ -56,10 +56,64 @@ export function OptionCard({ option, onSelect }: OptionCardProps) {
                     </div>
 
                     {/* Subtitle */}
-                    <p className="text-xs text-muted-foreground mb-2">{option.subtitle}</p>
+                    <p className="text-xs text-muted-foreground mb-1">{option.subtitle}</p>
 
-                    {/* Hospital & Address */}
-                    {option.details?.hospital && (
+                    {/* Description (if available) */}
+                    {option.description && (
+                        <p className="text-[11px] text-muted-foreground/80 mb-2">{option.description}</p>
+                    )}
+
+                    {/* BUSES & FLIGHTS - Route & Departure */}
+                    {(option.type === 'bus' || option.type === 'flight') && (
+                        <div className="mb-2 space-y-1">
+                            {option.details?.from && option.details?.to && (
+                                <div className="flex items-center gap-1 text-xs font-semibold text-primary">
+                                    <MapPin className="h-3.5 w-3.5" />
+                                    <span>{option.details.from} → {option.details.to}</span>
+                                </div>
+                            )}
+                            {option.details?.departure && (
+                                <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                                    <Clock className="h-3 w-3" />
+                                    <span>Departs: {option.details.departure}</span>
+                                    {option.details?.duration && <span className="text-[10px]">({option.details.duration})</span>}
+                                </div>
+                            )}
+                            {option.details?.busType && (
+                                <p className="text-[10px] text-muted-foreground">Bus: {option.details.busType}</p>
+                            )}
+                            {option.details?.aircraft && (
+                                <p className="text-[10px] text-muted-foreground">Aircraft: {option.details.aircraft}</p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* MOVIES - Cinema & Showtime */}
+                    {option.type === 'movie' && (
+                        <div className="mb-2 space-y-1">
+                            {option.details?.cinema && (
+                                <div className="flex items-center gap-1 text-xs font-medium">
+                                    <MapPin className="h-3 w-3" />
+                                    <span>{option.details.cinema}</span>
+                                </div>
+                            )}
+                            {option.details?.showtime && (
+                                <div className="flex items-center gap-1 text-[11px] text-green-600 dark:text-green-400">
+                                    <Clock className="h-3 w-3" />
+                                    <span>Showtime: {option.details.showtime}</span>
+                                    {option.details?.duration && <span className="text-[10px]">({option.details.duration})</span>}
+                                </div>
+                            )}
+                            {option.details?.language && (
+                                <p className="text-[10px] text-muted-foreground">
+                                    {option.details.language} • {option.details?.format || '2D'}
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* DOCTORS - Hospital & Address */}
+                    {option.type === 'appointment' && option.details?.hospital && (
                         <div className="mb-2 space-y-0.5">
                             <p className="text-xs font-medium">{option.details.hospital}</p>
                             {option.details?.address && (
@@ -68,22 +122,18 @@ export function OptionCard({ option, onSelect }: OptionCardProps) {
                                     <span>{option.details.address}</span>
                                 </div>
                             )}
-                        </div>
-                    )}
-
-                    {/* Phone */}
-                    {option.details?.phone && (
-                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1">
-                            <Phone className="h-3 w-3" />
-                            <span>{option.details.phone}</span>
-                        </div>
-                    )}
-
-                    {/* Next Slot */}
-                    {option.details?.nextSlot && (
-                        <div className="flex items-center gap-1 text-[10px] text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 px-2 py-1 rounded w-fit mb-2">
-                            <Clock className="h-3 w-3" />
-                            <span>Available: {option.details.nextSlot}</span>
+                            {option.details?.phone && (
+                                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                                    <Phone className="h-3 w-3" />
+                                    <span>{option.details.phone}</span>
+                                </div>
+                            )}
+                            {option.details?.nextSlot && (
+                                <div className="flex items-center gap-1 text-[10px] text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 px-2 py-1 rounded w-fit mt-1">
+                                    <Clock className="h-3 w-3" />
+                                    <span>Available: {option.details.nextSlot}</span>
+                                </div>
+                            )}
                         </div>
                     )}
 

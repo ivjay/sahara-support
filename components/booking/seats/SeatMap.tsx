@@ -81,20 +81,20 @@ export function SeatMap({
             setRows(seatMap);
             setVenueType(data.venue.venue_type || '');
             setError(null);
-        } catch (err: any) {
+        } catch (err) {
             console.error('[SeatMap] Error:', err);
-            setError(err.message);
+            setError(err instanceof Error ? err.message : 'Failed to load seats');
         } finally {
             setLoading(false);
         }
     }
 
-    function buildSeatMap(config: any, inventory: SeatInventoryItem[]): VenueRow[] {
+    function buildSeatMap(config: { rows: Array<{ label: string; seats: Array<{ number: number; type?: string } | null> }> }, inventory: SeatInventoryItem[]): VenueRow[] {
         const inventoryMap = new Map(inventory.map(s => [s.seatLabel, s.status]));
 
-        return config.rows.map((row: any) => ({
+        return config.rows.map((row) => ({
             label: row.label,
-            seats: row.seats.map((seat: any) => {
+            seats: row.seats.map((seat) => {
                 if (!seat) return null;
 
                 const label = typeof seat.number === 'number'
@@ -115,7 +115,7 @@ export function SeatMap({
             ...row,
             seats: row.seats.map(seat => {
                 if (!seat || seat.label !== label) return seat;
-                return { ...seat, status: status as any };
+                return { ...seat, status: status as SeatInfo['status'] };
             })
         })));
     }
@@ -143,8 +143,8 @@ export function SeatMap({
             if (!result.success && result.failedSeats) {
                 setError(`Failed to reserve: ${result.failedSeats.join(', ')}`);
             }
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Reservation failed');
         } finally {
             setReserving(false);
         }

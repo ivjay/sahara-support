@@ -11,23 +11,24 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
  */
 export async function saveConversation(data: {
     conversation_id: string;
-    messages: any[];
+    messages: Array<{ role: string; content: string }>;
     stage: string;
     language: string;
-    collected_details: any;
+    collected_details: Record<string, string>;
+    user_id?: string; // Optional user isolation
 }) {
     try {
-        // ✅ FIX: Match the exact table structure
         const { error } = await supabase
             .from('conversations')
             .upsert({
                 conversation_id: data.conversation_id,
+                user_id: data.user_id || 'guest', // ✅ Track user
                 messages: data.messages,
                 stage: data.stage,
                 language: data.language,
-                booking_type: null, // ✅ Add this field
+                booking_type: null,
                 collected_details: data.collected_details,
-                updated_at: new Date().toISOString() // ✅ Explicitly set updated_at
+                updated_at: new Date().toISOString()
             }, {
                 onConflict: 'conversation_id'
             });
@@ -42,6 +43,56 @@ export async function saveConversation(data: {
         console.error('[Supabase] Save failed:', error);
         throw error;
     }
+}
+
+/**
+ * Profile Management
+ */
+export async function getProfile(userId: string) {
+    try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('user_id', userId)
+            .single();
+
+        // PGRST116 = no rows found (normal case for new users)
+        // PGRST204 = table doesn't exist (need to run migration)
+        if (error && error.code !== 'PGRST116') {
+            if (error.code === 'PGRST204' || error.message?.includes('406')) {
+                console.warn('[Supabase] ⚠ Profiles table not found. Run RUN_THIS_IN_SUPABASE.sql');
+                return null;
+            }
+            console.error('[Supabase] ✗ Error fetching profile:', error);
+            return null;
+        }
+
+        return data;
+    } catch (err) {
+        console.warn('[Supabase] Profile fetch failed:', err);
+        return null;
+    }
+}
+
+export async function updateProfile(userId: string, profile: Record<string, unknown>) {
+    const { data, error } = await supabase
+        .from('profiles')
+        .upsert({
+            user_id: userId,
+            ...profile,
+            updated_at: new Date().toISOString()
+        }, {
+            onConflict: 'user_id'
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('[Supabase] ✗ Error updating profile:', error);
+        throw error;
+    }
+
+    return data;
 }
 
 /**
@@ -68,7 +119,7 @@ export async function getConversation(conversationId: string) {
 export async function createBooking(data: {
     booking_id: string;
     booking_type: string;
-    details: any;
+    details: Record<string, unknown>;
     total_price: number;
     status: string;
 }) {
@@ -81,9 +132,9 @@ export async function createBooking(data: {
         });
 
         const bookingData = {
-            id: data.booking_id,
+            booking_id: data.booking_id,  // ✅ Fixed: Use booking_id (not id)
             booking_type: data.booking_type,
-            booking_data: data.details || {},
+            details: data.details || {},  // ✅ Fixed: Column is called 'details' (not booking_data)
             user_id: null, // ✅ Add user tracking later if needed
             total_price: data.total_price,
             status: data.status.toLowerCase(), // Ensure lowercase for consistency
@@ -108,10 +159,10 @@ export async function createBooking(data: {
 
         console.log('[Supabase] ✓ Booking created successfully:', data.booking_id);
         return insertedData;
-    } catch (error: any) {
+    } catch (error) {
         console.error('[Supabase] Booking creation failed:', {
-            error: error.message,
-            stack: error.stack
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
         });
         throw error;
     }
@@ -128,7 +179,7 @@ export async function updateBookingStatus(bookingId: string, status: string) {
                 status,
                 updated_at: new Date().toISOString()
             })
-            .eq('id', bookingId)
+            .eq('booking_id', bookingId)  // ✅ Fixed: Query by booking_id (not id)
             .select()
             .single();
 
@@ -157,8 +208,8 @@ export async function checkSupabaseConnection() {
         const { error } = await supabase.from('bookings').select('*', { count: 'exact', head: true }).limit(1);
         if (error) throw error;
         return { configured: true, connected: true };
-    } catch (error: any) {
-        return { configured: true, connected: false, error: error.message };
+    } catch (error) {
+        return { configured: true, connected: false, error: error instanceof Error ? error.message : String(error) };
     }
 }
 

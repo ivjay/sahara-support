@@ -96,8 +96,8 @@ export const CURRENT_USER: UserProfile = {
  * Get user context string for AI prompt injection
  * This formats the user data in a way the AI can understand
  */
-export function getUserContextForAI(): string {
-    const user = CURRENT_USER;
+export function getUserContextForAI(profile?: UserProfile): string {
+    const user = profile || CURRENT_USER;
 
     return `
 ## User Context (Personalization)
@@ -109,14 +109,14 @@ You are speaking with a specific user. Use this information to personalize your 
 - **KYC Status**: ${user.kycStatus}
 
 ### User Preferences
-${user.preferences.map(p => `- ${p}`).join('\n')}
+${user.preferences.length > 0
+            ? user.preferences.map(p => `- ${p}`).join('\n')
+            : "No specific preferences set yet."}
 
 ### Personalization Rules
 1. Greet the user by their first name ("${user.firstName}")
 2. When booking buses/flights, default departure to "${user.city}"
-3. For food-related suggestions, remember they prefer: ${user.preferences.find(p => p.includes('Vegetarian') || p.includes('Vegan')) || 'no specific diet'}
-4. For seat preferences: ${user.preferences.find(p => p.includes('Seat') || p.includes('Aisle')) || 'no preference'}
-5. For travel time: ${user.preferences.find(p => p.includes('Morning') || p.includes('Evening')) || 'no preference'}
+3. For food/service suggestions, check their preferences: ${user.preferences.length > 0 ? user.preferences.join(', ') : 'no specific preferences'}
 `;
 }
 

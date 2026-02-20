@@ -12,7 +12,7 @@ interface DoctorFormProps {
 }
 
 export function DoctorForm({ data, onChange }: DoctorFormProps) {
-    const updateField = (field: keyof BookingOption, value: any) => {
+    const updateField = (field: keyof BookingOption, value: string | number | boolean) => {
         onChange({ ...data, [field]: value });
     };
 

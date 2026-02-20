@@ -1,4 +1,5 @@
 import { UserProfile } from "@/lib/user-context";
+export type { UserProfile };
 
 export type MessageRole = "user" | "assistant" | "system";
 
@@ -23,9 +24,42 @@ export interface BookingOption {
     category?: string; // doctor, salon, plumber, event, standup, concert, etc.
     title: string; // Main display name
     subtitle: string; // Secondary info (location, route, cinema)
+    description?: string; // Brief description of the service
+    location?: string; // Origin/venue location
+    tags?: string[]; // Searchable keywords for hybrid search
     price: number;
     currency: string;
-    details: Record<string, string>; // ALL values must be strings!
+    details: {
+        // Common fields
+        from?: string;
+        to?: string;
+        departure?: string;
+        arrival?: string;
+        duration?: string;
+        // Transport specific
+        busType?: string;
+        aircraft?: string;
+        seats?: string;
+        // Healthcare specific
+        hospital?: string;
+        clinic?: string;
+        address?: string;
+        phone?: string;
+        experience?: string;
+        nextSlot?: string;
+        availableDays?: string;
+        timings?: string;
+        rating?: string;
+        // Entertainment specific
+        cinema?: string;
+        theater?: string;
+        showtime?: string;
+        endTime?: string;
+        language?: string;
+        format?: string;
+        // Allow any additional fields
+        [key: string]: any;
+    };
     available: boolean;
     qrCodeUrl?: string;
     venueId?: string; // For seat selection (movies, buses, flights)
@@ -41,6 +75,12 @@ export interface Message {
     options?: BookingOption[];
     receipt?: Record<string, any>;
     quickReplies?: string[];
+    seatSelection?: {
+        venueId: string;
+        serviceId: string;
+        eventDate: string;
+        eventTime: string;
+    };
 }
 
 // Booking flow state
@@ -70,6 +110,12 @@ export interface ChatState {
     userId: string;
     sessions: ChatSession[];
     userProfile?: UserProfile;
+    wizardState?: {
+        mode: "selector" | "wizard" | "chat";
+        service: BookingOption;
+        serviceType: "movie" | "bus" | "flight" | "appointment";
+        stepData?: Record<string, any>;
+    } | null;
 }
 
 // Action types for chat reducer
@@ -83,6 +129,8 @@ export type ChatAction =
     | { type: "DELETE_SESSION"; payload: string }
     | { type: "UPDATE_BOOKING_DATA"; payload: Record<string, string> }
     | { type: "UPDATE_USER_PROFILE"; payload: UserProfile }
+    | { type: "SET_WIZARD_STATE"; payload: ChatState["wizardState"] }
+    | { type: "UPDATE_WIZARD_STATE_FUNCTIONAL"; payload: (prev: ChatState["wizardState"]) => ChatState["wizardState"] }
     | { type: "REHYDRATE"; payload: ChatState };
 
 export const INTENT_REQUIRED_FIELDS: Record<Intent, string[]> = {

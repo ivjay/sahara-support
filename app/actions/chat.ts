@@ -2,13 +2,7 @@
 
 import { processMessage } from "@/lib/chat/agent";
 import { saveConversation, createBooking } from "@/lib/supabase";
-import { BookingOption } from "@/lib/chat/types";
-import {
-    MOCK_BUS_OPTIONS,
-    MOCK_FLIGHT_OPTIONS,
-    MOCK_APPOINTMENT_OPTIONS,
-    MOCK_MOVIE_OPTIONS
-} from "@/lib/chat/mock-data";
+import { BookingOption, UserProfile } from "@/lib/chat/types";
 import { chat as ollamaChat } from "@/lib/integrations/ollama-service";
 import { getPersonalizedPrompt, parseBookingResponse } from "@/lib/chat/sahara-prompt-conversational";
 
@@ -24,118 +18,135 @@ export interface AgentResponseAPIType {
         bookingId?: string;
         details?: Record<string, any>;
     };
+    seatSelection?: {
+        venueId: string;
+        serviceId: string;
+        eventDate: string;
+        eventTime: string;
+    };
 }
 
-/**
- * Fetch admin-created services from Supabase (with timeout)
- */
-async function getAdminServices(): Promise<BookingOption[]> {
+async function getRelevantServices(userMessage: string, history: Array<{ role: string; content: string }> = []): Promise<BookingOption[]> {
     try {
-        const { supabase } = await import("@/lib/supabase");
+        // Use hybrid search for intelligent service retrieval
+        const { searchServices } = await import('@/lib/search');
 
-        console.log('[Chat] Fetching admin services from Supabase...');
+        console.log('[Chat] 🔍 Using hybrid search for:', userMessage);
 
-        // Add a race condition with timeout to fail fast
-        const fetchPromise = supabase
-            .from('services')
-            .select('*')
-            .eq('available', true);
+        const searchResults = await searchServices(userMessage, 20);
 
-        const timeoutPromise = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('Supabase timeout')), 5000)
-        );
+        console.log(`[Chat] ✓ Hybrid search found ${searchResults.results.length} services`);
 
-        const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+        // Convert search results to BookingOption format
+        const services: BookingOption[] = searchResults.results.map(result => ({
+            id: result.service_id,
+            title: result.title,
+            subtitle: result.description,
+            price: result.price || 0,
+            currency: 'NPR',
+            type: result.type as any, // ✅ Use the actual type (movie, bus, etc.)
+            category: result.category,
+            venueId: result.id,
+            images: result.images,
+            description: result.description,
+            tags: result.tags,
+            details: {
+                location: result.location || '',
+                capacity: result.capacity?.toString() || '',
+                rating: result.rating_avg?.toString() || ''
+            },
+            available: true
+        }));
 
-        if (error) {
-            console.error('[Chat] ✗ Supabase error:', error);
-            return [];
+        if (services.length > 0) {
+            console.log('[Chat] ✓ Top results:', services.slice(0, 3).map(s =>
+                `${s.title} (score: ${searchResults.results.find(r => r.service_id === s.id)?.scores.final.toFixed(2)})`
+            ).join(', '));
         }
-
-        if (!data || data.length === 0) {
-            console.warn('[Chat] ⚠ No admin services found in Supabase');
-            return [];
-        }
-
-        console.log(`[Chat] ✓ Fetched ${data.length} admin services from Supabase`);
-
-        // ✅ Convert to BookingOption format
-        const services = data.map((service: any) => ({
-            id: service.id,
-            type: service.type || 'appointment',
-            category: service.category,
-            title: service.title,
-            subtitle: service.subtitle || '',
-            price: service.price || 0,
-            currency: service.currency || 'NPR',
-            details: service.details || {},
-            available: service.available !== false,
-            qrCodeUrl: service.qrCodeUrl
-        })) as BookingOption[];
-
-        console.log('[Chat] ✓ Converted services:', services.map(s => `${s.title} (${s.type}, category: ${s.category})`));
 
         return services;
     } catch (error) {
-        console.error('[Chat] ✗ Failed to fetch admin services:', error);
+        console.error('[Chat] ✗ Hybrid search failed:', error);
         return [];
     }
 }
 
-async function getRelevantServices(userMessage: string, history: Array<{ role: string; content: string }> = []): Promise<BookingOption[]> {
-    const context = history.slice(-3).map(m => m.content).join(' ').toLowerCase();
-    const msg = userMessage.toLowerCase() + " " + context;
-
-    let mockServices: BookingOption[] = [];
-
-    // Get relevant mock services
-    if (msg.includes('bus')) mockServices = MOCK_BUS_OPTIONS;
-    else if (msg.includes('flight') || msg.includes('fly')) mockServices = MOCK_FLIGHT_OPTIONS;
-    else if (msg.includes('doctor') || msg.includes('appointment') || msg.includes('hospital') ||
-             msg.includes('therapy') || msg.includes('therapist') || msg.includes('psychologist')) {
-        mockServices = MOCK_APPOINTMENT_OPTIONS;
-    }
-    else if (msg.includes('movie') || msg.includes('cinema')) mockServices = MOCK_MOVIE_OPTIONS;
-
-    // ✅ FIX: Fetch and merge admin services
-    const adminServices = await getAdminServices();
-
-    console.log(`[Chat] ✓ Found ${mockServices.length} mock services + ${adminServices.length} admin services`);
-    if (adminServices.length > 0) {
-        console.log('[Chat] ✓ Admin services:', adminServices.map(s => `${s.title} (${s.type})`).join(', '));
-    }
-
-    return [...mockServices, ...adminServices];
-}
-
 export async function sendMessage(
     userMessage: string,
-    conversationId: string,
     conversationHistory: Array<{ role: "user" | "assistant"; content: string }>,
-    userName?: string
+    conversationId?: string,
+    userName?: string,
+    userId?: string
 ): Promise<AgentResponseAPIType> {
     try {
         console.log(`[Chat] Processing: "${userMessage}"`);
 
-        const relevantServices = await getRelevantServices(userMessage, conversationHistory);
-        const agentResponse = await processMessage(userMessage, null, relevantServices, conversationHistory, userName);
+        // ✅ FAST TRACK: Handle simple greetings without LLM or Search (Solves 45s "Hi" issue)
+        const msgValue = userMessage.toLowerCase().trim();
+        const greetings = ['hi', 'hello', 'hey', 'namaste', 'morning', 'evening', 'hola'];
+        const isSimpleGreeting = greetings.some(g => msgValue === g || msgValue === `${g}.` || msgValue === `${g}!`);
 
+        if (isSimpleGreeting && conversationHistory.length === 0) {
+            console.log("[Chat] ⚡ Fast-track greeting detected");
+            const finalConversationId = conversationId || `CONV-${Date.now()}`;
+            const firstName = userName?.split(' ')[0] || 'there';
+            return {
+                success: true,
+                content: `Namaste ${firstName}! 👋 I'm **Sahara**, your personal assistant. \n\nI can help you book **bus tickets**, **flights**, **doctor appointments**, or **movies** across Nepal. \n\nHow can I help you today?`,
+                conversationId: finalConversationId,
+                quickReplies: ["Book a bus ticket", "Find flights", "Doctor appointment", "Movie tickets"],
+                options: []
+            };
+        }
+
+        const relevantServices = await getRelevantServices(userMessage, conversationHistory);
+
+        // Construct a search-friendly profile
+        const userProfile: UserProfile | undefined = userId ? {
+            id: userId,
+            name: userName || 'User',
+            firstName: userName?.split(' ')[0] || 'User',
+            email: '', phone: '', alternatePhone: '', avatarInitials: 'U',
+            dateOfBirth: '', gender: '', nationality: '', idNumber: '',
+            currentAddress: '', permanentAddress: '', city: 'Kathmandu', postalCode: '',
+            emergencyName: '', emergencyPhone: '', emergencyRelation: '',
+            kycStatus: 'Not Started', accountType: 'Free', memberSince: '',
+            preferences: []
+        } : undefined;
+
+        const agentResponse = await processMessage(userMessage, null, relevantServices, conversationHistory, userProfile);
+
+        const currentUserId = userId || 'guest';
         const finalConversationId = conversationId || `CONV-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`;
 
         try {
             await saveConversation({
                 conversation_id: finalConversationId,
+                user_id: currentUserId,
                 messages: [
                     ...conversationHistory,
                     { role: "user", content: userMessage },
                     { role: "assistant", content: agentResponse.content }
                 ],
-                stage: "gathering",
+                stage: agentResponse.stage || "gathering",
                 language: "en",
-                collected_details: {}
+                collected_details: agentResponse.collected_details || {}
             });
-        } catch (dbError: any) {
-            console.warn("[Chat] DB failed:", dbError.message);
+        } catch (dbError) {
+            console.warn("[Chat] DB failed:", dbError instanceof Error ? dbError.message : String(dbError));
+        }
+
+        // Handle Seat Selection metadata for frontend
+        let seatSelection = undefined;
+        if (agentResponse.stage === 'seating' && agentResponse.collected_details?.serviceId) {
+            const serviceId = agentResponse.collected_details.serviceId;
+            const service = relevantServices.find(s => s.id === serviceId);
+            seatSelection = {
+                venueId: (service as any)?.venue_id || (service as any)?.venueId || 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+                serviceId: serviceId,
+                eventDate: agentResponse.collected_details.date || new Date().toISOString().split('T')[0],
+                eventTime: agentResponse.collected_details.time || 'all-day'
+            };
         }
 
         let bookingResult = undefined;
@@ -210,10 +221,11 @@ export async function sendMessage(
             bookingType: agentResponse.newBookingState?.intent.toLowerCase().replace('_booking', ''),
             quickReplies: agentResponse.quickReplies || [],
             options: agentResponse.options || [],
-            booking: bookingResult
+            booking: bookingResult,
+            seatSelection: seatSelection
         };
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("[Chat] Error:", error);
         return {
             success: false,
@@ -258,7 +270,7 @@ async function checkOllamaHealth(): Promise<boolean> {
 export async function getAgentResponse(
     userMessage: string,
     conversationHistory: Array<{ role: "user" | "assistant"; content: string }>,
-    userName?: string
+    userProfile?: UserProfile
 ) {
     // Quick health check before attempting Ollama call
     const isHealthy = await checkOllamaHealth();
@@ -289,7 +301,7 @@ export async function getAgentResponse(
         console.log("[Chat] 🦙 Calling Ollama...");
 
         const messages = [
-            { role: "system" as const, content: getPersonalizedPrompt(userName) },
+            { role: "system" as const, content: getPersonalizedPrompt(userProfile) },
             ...conversationHistory,
             { role: "user" as const, content: userMessage }
         ];
@@ -305,19 +317,19 @@ export async function getAgentResponse(
         ollamaHealthy = true; // Mark as healthy if successful
 
         return {
-            content: parsed.message || "I'm here to help! What would you like to do?",
-            stage: parsed.stage,
-            language: parsed.language,
-            booking_type: parsed.booking_type,
-            collected_details: parsed.collected_details || {},
-            showOptions: parsed.show_options ?? null as import("@/lib/chat/types").Intent | null,
-            optionType: parsed.option_type ?? null,
-            filterCategory: parsed.filter_category ?? null as string | null,
+            content: (parsed as any).message || (parsed as any).content || "I'm here to help! What would you like to do?",
+            stage: (parsed as any).stage,
+            language: (parsed as any).language,
+            booking_type: (parsed as any).booking_type,
+            collected_details: (parsed as any).collected_details || {},
+            showOptions: (parsed as any).show_options || (parsed as any).showOptions || null,
+            optionType: (parsed as any).option_type || (parsed as any).optionType || null,
+            filterCategory: (parsed as any).filter_category || (parsed as any).filterCategory || null,
             quickReplies: [] as string[]
         };
 
-    } catch (error: any) {
-        console.error("[Chat] AI failed:", error.message);
+    } catch (error) {
+        console.error("[Chat] AI failed:", error instanceof Error ? error.message : String(error));
         ollamaHealthy = false; // Mark as unhealthy
 
         return {

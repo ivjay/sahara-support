@@ -3,10 +3,8 @@ import {
     BookingState,
     BookingOption,
     Message,
+    UserProfile
 } from "./types";
-import {
-    WELCOME_MESSAGE,
-} from "./mock-data";
 import { delay, generateId } from "./utils";
 import { getAgentResponse } from "@/app/actions/chat";
 import { getOptionsByType } from "@/lib/chat/option-helper";
@@ -18,6 +16,15 @@ export interface AgentResponse {
     options?: BookingOption[];
     quickReplies?: string[];
     newBookingState?: BookingState | null;
+    stage?: string;
+    collected_details?: Record<string, any>;
+    language?: string;
+    seatSelection?: {
+        venueId: string;
+        serviceId: string;
+        eventDate: string;
+        eventTime: string;
+    };
 }
 
 const QR_OPTION: BookingOption = {
@@ -47,7 +54,7 @@ export async function processMessage(
     currentBooking: BookingState | null,
     allServices: BookingOption[] = [],
     history: Array<{ role: "user" | "assistant"; content: string }> = [],
-    userName?: string
+    userProfile?: UserProfile
 ): Promise<AgentResponse> {
 
     // ✅ IMPROVED: Handle Payment Verification (Only trigger when user confirms payment)
@@ -57,7 +64,7 @@ export async function processMessage(
         // Check if user is confirming they've paid (more specific keywords)
         // Avoid false positives like "I haven't paid" by checking for negative keywords
         const hasNegativeKeyword = msg.includes("not") || msg.includes("haven't") || msg.includes("didn't") ||
-                                     msg.includes("gareko chaina") || msg.includes("gareko chhaina");
+            msg.includes("gareko chaina") || msg.includes("gareko chhaina");
 
         const paymentConfirmed = !hasNegativeKeyword && (
             msg.includes("i have paid") ||
@@ -95,7 +102,7 @@ export async function processMessage(
     }
 
     // ✅ Call AI - LLM is in FULL CONTROL
-    const aiResponse = await getAgentResponse(userMessage, history, userName);
+    const aiResponse = await getAgentResponse(userMessage, history, userProfile);
     console.log("[Agent] 🤖 LLM Response:", aiResponse);
 
     // ✅ TRANSLATE if Nepali detected
@@ -139,105 +146,26 @@ export async function processMessage(
     const recentHistory = history.slice(-3).map(m => m.content).join(' ').toLowerCase();
     const fullContext = msg + ' ' + recentHistory;
 
-    if (!showOptions || showOptions === undefined) {
-        // Check for general service requests first
-        if (msg.includes('what services') || msg.includes('show services') || msg.includes('what options') ||
-            msg.includes('show options') || msg.includes('where are') && msg.includes('options') ||
-            msg.includes('available') && (msg.includes('services') || msg.includes('options')) ||
-            msg.includes('what can you') || msg.includes('what do you offer')) {
-            console.log("[Agent] 🛡️ SAFETY NET: General service request - showing all doctors");
+    if (!showOptions) {
+        // Essential keywords for quick intent detection
+        const doctorKeywords = ['doctor', 'appointment', 'visit', 'hospital', 'clinic', 'dentist', 'therapy', 'surgeon', 'ortho', 'derma', 'skin', 'eye', 'checkup'];
+        const busKeywords = ['bus', 'travel', 'yatra', 'sajha'];
+        const flightKeywords = ['flight', 'fly', 'plane', 'yeti', 'buddha'];
+        const movieKeywords = ['movie', 'cinema', 'film', 'qfx', 'big movies'];
+
+        if (doctorKeywords.some(k => fullContext.includes(k))) {
             showOptions = true;
             optionType = "doctor";
-            filterCategory = null; // Show all doctors
-        }
-        // Check for specific service keywords (use fullContext for context-awareness)
-        else if (fullContext.includes('therapy') || fullContext.includes('psychologist') || fullContext.includes('therapist') ||
-                 fullContext.includes('counseling') || fullContext.includes('anxious') || fullContext.includes('anxiety') ||
-                 fullContext.includes('mental health') || fullContext.includes('depression')) {
-            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for therapy request");
-            showOptions = true;
-            optionType = "doctor";
-            filterCategory = "psychologist";
-        } else if (fullContext.includes('pediatrician') || fullContext.includes('child doctor') || fullContext.includes('baby doctor') ||
-                   fullContext.includes('child') && fullContext.includes('doctor')) {
-            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for pediatrician request");
-            showOptions = true;
-            optionType = "doctor";
-            filterCategory = "pediatrician";
-        } else if (fullContext.includes('heart') || fullContext.includes('cardio') || fullContext.includes('chest pain') ||
-                   fullContext.includes('blood pressure') || fullContext.includes('cardiac')) {
-            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for cardiologist request");
-            showOptions = true;
-            optionType = "doctor";
-            filterCategory = "cardiologist";
-        } else if (fullContext.includes('bone') || fullContext.includes('ortho') || fullContext.includes('fracture') ||
-                   fullContext.includes('joint') || fullContext.includes('spine') || fullContext.includes('back pain')) {
-            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for orthopedic request");
-            showOptions = true;
-            optionType = "doctor";
-            filterCategory = "orthopedic";
-        } else if (fullContext.includes('skin') || fullContext.includes('derma') || fullContext.includes('acne') ||
-                   fullContext.includes('rash') || fullContext.includes('hair fall')) {
-            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for dermatologist request");
-            showOptions = true;
-            optionType = "doctor";
-            filterCategory = "dermatologist";
-        } else if (fullContext.includes('surgery') || fullContext.includes('surgeon') || fullContext.includes('operation')) {
-            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for surgeon request");
-            showOptions = true;
-            optionType = "doctor";
-            filterCategory = "surgeon";
-        } else if (fullContext.includes('kidney') || fullContext.includes('nephro') || fullContext.includes('renal') ||
-                   fullContext.includes('urinary')) {
-            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for nephrologist request");
-            showOptions = true;
-            optionType = "doctor";
-            filterCategory = "nephrologist";
-        } else if (fullContext.includes('gynec') || fullContext.includes('pregnancy') || fullContext.includes('women') && fullContext.includes('doctor')) {
-            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for gynecologist request");
-            showOptions = true;
-            optionType = "doctor";
-            filterCategory = "gynecologist";
-        } else if (fullContext.includes('teeth') || fullContext.includes('dental') || fullContext.includes('dentist') || fullContext.includes('tooth')) {
-            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for dentist request");
-            showOptions = true;
-            optionType = "doctor";
-            filterCategory = "dentist";
-        } else if (fullContext.includes('eye') || fullContext.includes('vision') || fullContext.includes('ophtha')) {
-            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for ophthalmologist request");
-            showOptions = true;
-            optionType = "doctor";
-            filterCategory = "ophthalmologist";
-        } else if (fullContext.includes('ear') || fullContext.includes('nose') || fullContext.includes('throat') || fullContext.includes('ent')) {
-            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for ENT request");
-            showOptions = true;
-            optionType = "doctor";
-            filterCategory = "ent";
-        } else if (fullContext.includes('neuro') || fullContext.includes('brain') || fullContext.includes('migraine') || fullContext.includes('seizure')) {
-            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for neurologist request");
-            showOptions = true;
-            optionType = "doctor";
-            filterCategory = "neurologist";
-        } else if (fullContext.includes('general physician') || fullContext.includes('family doctor') || fullContext.includes('gp')) {
-            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for general physician request");
-            showOptions = true;
-            optionType = "doctor";
-            filterCategory = "general";
-        } else if (msg.includes('doctor') || msg.includes('appointment') ||
-                   (msg.includes('visit') || msg.includes('see')) && (msg.includes('hospital') || msg.includes('clinic'))) {
-            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for doctor request");
-            showOptions = true;
-            optionType = "doctor";
-        } else if (msg.includes('bus') || msg.includes('travel') && !msg.includes('flight')) {
-            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for bus request");
+            // Extract specific category if possible
+            const specialties = ['dentist', 'psychologist', 'cardiologist', 'pediatrician', 'orthopedic', 'dermatologist'];
+            filterCategory = specialties.find(s => fullContext.includes(s.substring(0, 5))) || null;
+        } else if (busKeywords.some(k => fullContext.includes(k))) {
             showOptions = true;
             optionType = "bus";
-        } else if (msg.includes('flight') || msg.includes('fly') || msg.includes('plane')) {
-            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for flight request");
+        } else if (flightKeywords.some(k => fullContext.includes(k))) {
             showOptions = true;
             optionType = "flight";
-        } else if (msg.includes('movie') || msg.includes('cinema') || msg.includes('film')) {
-            console.log("[Agent] 🛡️ SAFETY NET: Forcing show_options for movie request");
+        } else if (movieKeywords.some(k => fullContext.includes(k))) {
             showOptions = true;
             optionType = "movie";
         }
@@ -276,7 +204,10 @@ export async function processMessage(
         content: finalContent,
         options: finalOptions,
         quickReplies: aiResponse.quickReplies || [],
-        newBookingState: currentBooking
+        newBookingState: currentBooking,
+        stage: aiResponse.stage,
+        collected_details: aiResponse.collected_details,
+        language: aiResponse.language
     };
 }
 
@@ -337,15 +268,43 @@ export async function handleOptionSelection(
         movie: "MOVIE_BOOKING"
     };
 
+    const needsSeats = option.type === 'movie' || option.type === 'bus' || option.type === 'flight';
+
+    if (needsSeats) {
+        return {
+            content: `Great choice! 🎬 **${option.title}** looks perfect. \n\nPlease select your seats from the map below so I can get your tickets ready!`,
+            newBookingState: {
+                intent: intentMap[option.type] || "UNKNOWN",
+                step: 2, // Gathering details (seats)
+                collectedData: {
+                    serviceId: option.id,
+                    serviceTitle: option.title,
+                    price: `${option.currency} ${option.price}`
+                },
+                requiredFields: [],
+                isComplete: false
+            },
+            // Metadata to trigger ChatSeatPicker
+            stage: "seating",
+            seatSelection: {
+                venueId: option.venueId || 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+                serviceId: option.id,
+                eventDate: option.details?.date || new Date().toISOString().split('T')[0],
+                eventTime: option.details?.time || option.details?.showtime || 'all-day'
+            },
+            language: "en"
+        };
+    }
+
     const collectedData = {
         serviceId: option.id,
         from: option.details.route || option.title,
         to: option.subtitle,
         date: option.details.date || new Date().toLocaleDateString(),
         specialist: option.title,
-        hospital: option.details.hospital,
-        theater: option.details.subtitle,
-        time: option.details.time || option.details.showtime || option.details.departure,
+        hospital: option.details.hospital || '',
+        theater: option.details.subtitle || '',
+        time: option.details.time || option.details.showtime || option.details.departure || '',
         price: `${option.currency} ${option.price}`
     };
 
@@ -382,7 +341,7 @@ export function getWelcomeMessage(): Message {
     return {
         id: generateId(),
         role: "assistant",
-        content: WELCOME_MESSAGE,
+        content: "Namaste! I'm **Sahara**, your personal assistant. I can help you book **bus tickets**, **flights**, **doctor appointments**, or **movies** across Nepal. \n\nHow can I help you today?",
         timestamp: new Date(),
         quickReplies: ["Book a bus ticket", "Find flights", "Doctor appointment", "Movie tickets"],
     };

@@ -33,14 +33,14 @@ export async function GET(request: NextRequest) {
         }
 
         // Format time slots from Supabase
-        const slots = (data || []).map((slot: any) => ({
+        const slots = (data || []).map((slot: { slot_time: string; status: string }) => ({
             time: slot.slot_time,
             status: slot.status,
             formattedTime: formatTime(slot.slot_time)
         }));
 
         return NextResponse.json({ slots });
-    } catch (error: any) {
+    } catch (error) {
         console.error('[TimeSlots API] Error:', error);
 
         // FALLBACK: Generate time slots locally
@@ -89,10 +89,10 @@ export async function POST(request: NextRequest) {
             expiry: data.reserved_until,
             message: 'Slot reserved for 10 minutes'
         });
-    } catch (error: any) {
+    } catch (error) {
         console.error('[TimeSlots API] Reservation error:', error);
         return NextResponse.json(
-            { error: error.message },
+            { error: error instanceof Error ? error.message : 'Internal server error' },
             { status: 500 }
         );
     }

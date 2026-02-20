@@ -69,7 +69,7 @@ export default function AdminPage() {
         return;
     }
 
-    const id = `svc-${Date.now()}`;
+    const serviceId = `svc-${Date.now()}`;  // Custom ID for service_id field
 
     // ✅ Auto-assign category based on type
     let finalCategory = newService.category;
@@ -90,7 +90,8 @@ export default function AdminPage() {
 
     try {
         await addService({
-            id,
+            id: serviceId,  // For display/reference in UI
+            service_id: serviceId,  // ✅ Database unique identifier
             title: newService.title!,
             subtitle: newService.subtitle || "Service Provider",
             type: serviceType,
@@ -99,7 +100,7 @@ export default function AdminPage() {
             available: true,
             details: stringifiedDetails,
             category: finalCategory
-        });
+        } as any);
 
         setIsAddMode(false);
         // Reset

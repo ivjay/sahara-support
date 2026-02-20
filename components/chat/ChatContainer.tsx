@@ -8,36 +8,12 @@ import { OptionCard } from "./OptionCard";
 import { BookingOption } from "@/lib/chat/types";
 import { Bus, Plane, Calendar, Ticket, MessageSquare } from "lucide-react";
 import { QRCodeCard } from "./QRCodeCard";
+import { ChatSeatPicker } from "./ChatSeatPicker";
 
 interface ChatContainerProps {
     onOptionSelect?: (option: BookingOption) => void;
     onSend?: (text: string) => void;
 }
-
-// SVG Illustration for welcome state
-const WelcomeIllustration = () => (
-    <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-6">
-        {/* Background circle */}
-        <circle cx="60" cy="60" r="55" fill="currentColor" className="text-primary/10" />
-        <circle cx="60" cy="60" r="40" fill="currentColor" className="text-primary/20" />
-
-        {/* Chat bubble 1 */}
-        <rect x="30" y="35" width="35" height="20" rx="10" fill="currentColor" className="text-primary" />
-        <circle cx="40" cy="45" r="2" fill="white" />
-        <circle cx="47" cy="45" r="2" fill="white" />
-        <circle cx="54" cy="45" r="2" fill="white" />
-
-        {/* Chat bubble 2 */}
-        <rect x="55" y="60" width="35" height="25" rx="10" fill="currentColor" className="text-muted-foreground/30" />
-        <rect x="62" y="68" width="20" height="3" rx="1.5" fill="currentColor" className="text-muted-foreground/50" />
-        <rect x="62" y="74" width="14" height="3" rx="1.5" fill="currentColor" className="text-muted-foreground/50" />
-
-        {/* Decorative dots */}
-        <circle cx="25" cy="75" r="4" fill="currentColor" className="text-chart-2/40" />
-        <circle cx="95" cy="35" r="3" fill="currentColor" className="text-chart-3/40" />
-        <circle cx="85" cy="90" r="5" fill="currentColor" className="text-primary/30" />
-    </svg>
-);
 
 const suggestions = [
     { icon: Bus, text: "Book a bus ticket", color: "bg-orange-500/10 text-orange-600" },
@@ -126,6 +102,28 @@ export function ChatContainer({ onOptionSelect, onSend }: ChatContainerProps) {
                                         )
                                     ))}
                                 </div>
+                            </div>
+                        )}
+
+                        {/* Seat Selection in Chat */}
+                        {message.seatSelection && (
+                            <div className="ml-12 mb-6">
+                                <ChatSeatPicker
+                                    venueId={message.seatSelection.venueId}
+                                    serviceId={message.seatSelection.serviceId}
+                                    eventDate={message.seatSelection.eventDate}
+                                    eventTime={message.seatSelection.eventTime}
+                                    onSelectionComplete={(seats) => {
+                                        if (onSend) {
+                                            onSend(`I've selected these seats: ${seats.join(', ')}`);
+                                        }
+                                    }}
+                                    onCancel={() => {
+                                        if (onSend) {
+                                            onSend("I changed my mind about the seats.");
+                                        }
+                                    }}
+                                />
                             </div>
                         )}
                     </div>

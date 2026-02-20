@@ -24,16 +24,20 @@ export async function GET() {
                 .order('created_at', { ascending: false });
 
             if (!error && data) {
-                bookings = data.map((b: any) => ({
-                    id: b.id,
-                    type: b.booking_type,
-                    title: b.booking_data?.title || b.booking_type,
-                    subtitle: b.booking_data?.subtitle || '',
-                    status: b.status.charAt(0).toUpperCase() + b.status.slice(1),
-                    amount: `NPR ${b.total_price}`,
-                    date: new Date(b.created_at),
-                    details: b.booking_data || {}
-                }));
+                bookings = data.map((b: Record<string, unknown>) => {
+                    const bookingData = (b.booking_data || b.details || {}) as Record<string, unknown>;
+                    const status = b.status as string;
+                    return {
+                        id: b.id,
+                        type: b.booking_type,
+                        title: bookingData.title || b.booking_type,
+                        subtitle: bookingData.subtitle || '',
+                        status: status.charAt(0).toUpperCase() + status.slice(1),
+                        amount: `NPR ${b.total_price}`,
+                        date: new Date(b.created_at as string),
+                        details: bookingData
+                    };
+                });
                 console.log(`[API] ✓ Fetched ${bookings.length} bookings from Supabase`);
                 return NextResponse.json(bookings);
             }
@@ -114,43 +118,36 @@ export async function POST(request: Request) {
 
             console.log(`[API] ✓ Booking created in Supabase: ${body.id}`);
             newBooking = supabaseBooking || body;
-        } catch (supabaseError: any) {
-            console.error('[API] ✗ Supabase booking creation failed:', {
-                error: supabaseError.message,
-                stack: supabaseError.stack
-            });
+        } catch (supabaseError) {
+            const supabaseMsg = supabaseError instanceof Error ? supabaseError.message : String(supabaseError);
+            console.error('[API] ✗ Supabase booking creation failed:', supabaseMsg);
 
             // Fallback to file-based DB (only works in development)
             try {
                 console.log('[API] Attempting file DB fallback...');
                 newBooking = await db.create(body);
                 console.log(`[API] ✓ Booking created in file DB: ${newBooking.id}`);
-            } catch (fileError: any) {
-                console.error('[API] ✗ File DB also failed:', {
-                    error: fileError.message,
-                    stack: fileError.stack
-                });
+            } catch (fileError) {
+                const fileMsg = fileError instanceof Error ? fileError.message : String(fileError);
+                console.error('[API] ✗ File DB also failed:', fileMsg);
 
                 // Return detailed error for debugging
                 return NextResponse.json({
                     error: 'Booking creation failed',
-                    supabaseError: supabaseError.message,
-                    fileDbError: fileError.message,
+                    supabaseError: supabaseMsg,
+                    fileDbError: fileMsg,
                     details: 'Both Supabase and file DB failed. Check database configuration and logs.'
                 }, { status: 500 });
             }
         }
 
         return NextResponse.json(newBooking, { status: 201 });
-    } catch (error: any) {
-        console.error('[API] Fatal error creating booking:', {
-            error: error.message,
-            stack: error.stack
-        });
+    } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        console.error('[API] Fatal error creating booking:', errorMsg);
         return NextResponse.json({
             error: 'Failed to create booking',
-            message: error.message || 'Unknown error',
-            details: error.stack
+            message: errorMsg,
         }, { status: 500 });
     }
 }

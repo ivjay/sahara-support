@@ -10,10 +10,17 @@ import { ConsolidatedSeatSelection } from "./steps/ConsolidatedSeatSelection";
 import { PaymentStep } from "./steps/PaymentStep";
 import { useAuth } from "@/lib/auth-context";
 import Link from "next/link";
+import type { BookingOption } from "@/lib/chat/types";
+
+interface PassengerInfo {
+    fullName: string;
+    phone?: string;
+    email?: string;
+}
 
 interface BookingWizardProps {
     serviceType: 'movie' | 'bus' | 'flight' | 'appointment';
-    selectedService: any;
+    selectedService: BookingOption;
     sessionId: string;
     onComplete: (bookingId: string) => void;
     onCancel: () => void;
@@ -22,6 +29,8 @@ interface BookingWizardProps {
         phone?: string;
         email?: string;
     };
+    stepData?: Record<string, unknown>;
+    onStepDataChange?: (data: Record<string, unknown>) => void;
 }
 
 export function BookingWizard({
@@ -30,18 +39,22 @@ export function BookingWizard({
     sessionId,
     onComplete,
     onCancel,
-    userProfile
+    userProfile,
+    stepData,
+    onStepDataChange
 }: BookingWizardProps) {
     const { user, isGuest } = useAuth();
-    const [activeTab, setActiveTab] = useState("schedule");
+    const [activeTab, setActiveTab] = useState((stepData?.activeTab as string) || "schedule");
 
-    // Basic state
-    const [selectedDate, setSelectedDate] = useState<string | null>(null);
-    const [selectedTime, setSelectedTime] = useState<string | null>(null);
-    const [passengerCount, setPassengerCount] = useState(1);
-    const [passengers, setPassengers] = useState<any[]>([
+    // Basic state initialized from stepData
+    const [selectedDate, setSelectedDate] = useState<string | null>((stepData?.selectedDate as string) || null);
+    const [selectedTime, setSelectedTime] = useState<string | null>((stepData?.selectedTime as string) || null);
+    const [passengerCount, setPassengerCount] = useState<number>((stepData?.passengerCount as number) || 1);
+    const [passengers, setPassengers] = useState<PassengerInfo[]>((stepData?.passengers as PassengerInfo[]) || [
         { fullName: userProfile?.name || '', phone: userProfile?.phone || '', email: userProfile?.email || '' }
     ]);
+
+    const [selectedSeats, setSelectedSeats] = useState<string[]>((stepData?.selectedSeats as string[]) || []);
 
     // Keep passengers array in sync with count
     useEffect(() => {
@@ -60,7 +73,19 @@ export function BookingWizard({
         });
     }, [passengerCount]);
 
-    const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
+    // Sync state to parent stepData
+    useEffect(() => {
+        if (onStepDataChange) {
+            onStepDataChange({
+                activeTab,
+                selectedDate,
+                selectedTime,
+                passengerCount,
+                passengers,
+                selectedSeats
+            });
+        }
+    }, [activeTab, selectedDate, selectedTime, passengerCount, passengers, selectedSeats, onStepDataChange]);
     const [totalPrice, setTotalPrice] = useState(selectedService.price || 0);
 
     const needsTime = true; // all service types need a departure / showtime / slot
@@ -299,6 +324,7 @@ export function BookingWizard({
                                     serviceType,
                                     serviceTitle: selectedService.title,
                                     serviceSubtitle: selectedService.subtitle,
+                                    serviceDetails: selectedService.details,
                                     date: selectedDate!,
                                     time: selectedTime || 'all-day',
                                     passengers: passengers,

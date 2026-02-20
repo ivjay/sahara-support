@@ -30,7 +30,7 @@ export const STEP_SEQUENCES: Record<string, BookingStep[]> = {
 
 export function createInitialState(
     serviceType: 'movie' | 'bus' | 'flight' | 'appointment',
-    selectedService: any,
+    selectedService: Record<string, unknown>,
     sessionId: string
 ): BookingWizardState {
     return {
@@ -38,15 +38,15 @@ export function createInitialState(
         currentStep: 'service_selected',
         stepHistory: [],
         selectedService,
-        venueId: selectedService.venueId,
+        venueId: selectedService.venueId as string | undefined,
         selectedDate: null,
         selectedTime: null,
         passengerCount: 1,
         passengers: [{ fullName: '' }],
         selectedSeats: [],
         seatReservationExpiry: null,
-        basePrice: selectedService.price || 0,
-        totalPrice: selectedService.price || 0,
+        basePrice: (selectedService.price as number) || 0,
+        totalPrice: (selectedService.price as number) || 0,
         paymentMethod: null,
         sessionId,
         bookingId: null,
