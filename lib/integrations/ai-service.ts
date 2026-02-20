@@ -94,9 +94,10 @@ export async function chat(
             // Use Ollama locally
             const response = await ollamaChat(
                 messages as OllamaMessage[],
-                options?.model,
-                options?.temperature,
-                options?.responseFormat
+                {
+                    temperature: options?.temperature,
+                    forceJson: options?.responseFormat === 'json'
+                }
             );
             return response.message.content;
         }
@@ -129,7 +130,7 @@ export async function checkAIService(): Promise<{ available: boolean; service: s
         };
     } else {
         try {
-            await ollamaChat([{ role: 'user', content: 'test' }], 'llama3.2:latest', 0.7);
+            await ollamaChat([{ role: 'user', content: 'test' }], { temperature: 0.7 });
             return { available: true, service: 'Ollama' };
         } catch {
             return { available: false, service: 'Ollama (unavailable)' };
