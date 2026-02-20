@@ -3,7 +3,7 @@
 import { processMessage } from "@/lib/chat/agent";
 import { saveConversation, createBooking } from "@/lib/supabase";
 import { BookingOption, UserProfile } from "@/lib/chat/types";
-import { chat as ollamaChat } from "@/lib/integrations/ollama-service";
+import { chat as aiChat } from "@/lib/integrations/ai-service"; // Smart AI service (Ollama + Gemini fallback)
 import { getPersonalizedPrompt, parseBookingResponse } from "@/lib/chat/sahara-prompt-conversational";
 
 export interface AgentResponseAPIType {
@@ -298,7 +298,7 @@ export async function getAgentResponse(
     }
 
     try {
-        console.log("[Chat] 🦙 Calling Ollama...");
+        console.log("[Chat] 🤖 Calling AI Service (Ollama/Gemini)...");
 
         const messages = [
             { role: "system" as const, content: getPersonalizedPrompt(userProfile) },
@@ -306,12 +306,12 @@ export async function getAgentResponse(
             { role: "user" as const, content: userMessage }
         ];
 
-        // ✅ OPTIMIZED: Don't force JSON format for faster responses
-        const rawResponse = await ollamaChat(messages as any, {
+        // ✅ Smart AI service - uses Gemini in production, Ollama locally
+        const responseText = await aiChat(messages, {
             temperature: 0.7,
-            forceJson: true  // Still need JSON for parsing booking responses
+            responseFormat: 'json'  // Request JSON format for parsing
         });
-        const parsed = parseBookingResponse(rawResponse.message.content);
+        const parsed = parseBookingResponse(responseText);
 
         console.log("[Chat] ✓ Stage:", parsed.stage);
         ollamaHealthy = true; // Mark as healthy if successful
