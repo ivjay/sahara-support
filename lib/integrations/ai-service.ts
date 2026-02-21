@@ -9,9 +9,10 @@ import { chat as ollamaChat, OllamaMessage } from './ollama-service';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const OLLAMA_URL = process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434';
 const IS_LOCALHOST = OLLAMA_URL.includes('localhost') || OLLAMA_URL.includes('127.0.0.1');
+const FORCE_GEMINI = process.env.USE_GEMINI === 'true';
 
-// Use Gemini in production or when Ollama is on localhost
-const USE_GEMINI = IS_PRODUCTION || IS_LOCALHOST;
+// Use Gemini in production or when Ollama is on localhost or when forced
+const USE_GEMINI = FORCE_GEMINI || IS_PRODUCTION || IS_LOCALHOST;
 
 interface Message {
     role: 'system' | 'user' | 'assistant';
